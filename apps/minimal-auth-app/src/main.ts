@@ -14,14 +14,18 @@ const addressSpan = document.getElementById('user-address')!;
 const sessionPre = document.getElementById('session-data')!;
 
 async function updateUI() {
-  const isAuthed = await client.isAuthenticated();
-  if (isAuthed) {
-    const session = await client.getSession();
-    addressSpan.innerText = session?.address || 'Unknown';
-    sessionPre.innerText = JSON.stringify(session, null, 2);
-    authSection.style.display = 'none';
-    statusSection.style.display = 'block';
-  } else {
+  try {
+    const verifyResult = await client.verifySession();
+    if (verifyResult.ok && verifyResult.payload) {
+      addressSpan.innerText = verifyResult.payload.address || 'Unknown';
+      sessionPre.innerText = JSON.stringify(verifyResult.payload, null, 2);
+      authSection.style.display = 'none';
+      statusSection.style.display = 'block';
+    } else {
+      authSection.style.display = 'block';
+      statusSection.style.display = 'none';
+    }
+  } catch {
     authSection.style.display = 'block';
     statusSection.style.display = 'none';
   }
@@ -37,7 +41,7 @@ loginBtn.addEventListener('click', async () => {
     const address = '0x000000000000000000000000000000000000dEaD';
     
     // 1. Fetch Nonce
-    const nonce = await client.fetchNonce(address);
+    const { nonce } = await client.getNonce(address);
     console.log('Nonce:', nonce);
 
     // 2. Sign Message (In a real app, prompt the user)
