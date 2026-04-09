@@ -37,7 +37,7 @@ Analyze smart contracts for vulnerabilities and patterns.
 
 ```typescript
 const analysis = await ai.analyzeContract({
-  address: '0x...',
+  address: '0x1111111111111111111111111111111111111111',
   chainId: 1,
 });
 
@@ -51,7 +51,7 @@ Explain complex transactions in plain English.
 
 ```typescript
 const explanation = await ai.explainTransaction({
-  hash: '0x...',
+  hash: '0x1111111111111111111111111111111111111111',
   chainId: 1,
 });
 

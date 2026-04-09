@@ -28,8 +28,8 @@ import { talakWeb3 } from '@talak-web3/core';
 // Create framework instance
 const app = talakWeb3({
   chains: [
-    { id: 1, rpcUrls: ['https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY'] },
-    { id: 137, rpcUrls: ['https://polygon-mainnet.g.alchemy.com/v2/YOUR_KEY'] },
+    { id: 1, rpcUrls: ['https://eth-mainnet.g.alchemy.com/v2/demo_api_key'] },
+    { id: 137, rpcUrls: ['https://polygon-mainnet.g.alchemy.com/v2/demo_api_key'] },
   ],
   auth: {
     domain: 'yourdomain.com',

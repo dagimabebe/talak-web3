@@ -13,7 +13,7 @@ export interface PinataStorageOptions {
  * Minimal IPFS storage adapter backed by Pinata.
  *
  * - `put()` uploads bytes as a file and returns `ipfs://<cid>/<path>`.
- * - `get()` resolves either `ipfs://...` or `https://...` URLs.
+ * - `get()` resolves either `ipfs://bafybeigdyrztxexamplecid1234567890` or `https://example.com/resource` URLs.
  */
 export class PinataStorageAdapter implements StorageAdapter {
   private readonly jwt: string;

@@ -44,7 +44,7 @@ app.post('/admin', requireRole('admin'), (req, res) => {
 });
 
 // Require NFT ownership
-app.post('/holder', requireNFT('0x...'), (req, res) => {
+app.post('/holder', requireNFT('0x1111111111111111111111111111111111111111'), (req, res) => {
   // Only NFT holders can access
 });
 ```

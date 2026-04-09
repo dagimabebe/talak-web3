@@ -25,7 +25,7 @@ Configure multiple RPC endpoints to ensure high availability. Talak-Web3 automat
 const config = {
   chains: [{
     id: 1,
-    rpcUrls: ['https://eth-mainnet.g.alchemy.com/v2/...', 'https://mainnet.infura.io/v3/...']
+    rpcUrls: ['https://eth-mainnet.g.alchemy.com/v2/demo_api_key', 'https://mainnet.infura.io/v3/demo_project_id']
   }]
 };
 ```

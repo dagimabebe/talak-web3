@@ -24,10 +24,10 @@ import {
   checksumAddress 
 } from '@talak-web3/utils';
 
-isAddress('0x...'); // true/false
-getAddress('0x...'); // checksummed address
+isAddress('0x1111111111111111111111111111111111111111'); // true/false
+getAddress('0x1111111111111111111111111111111111111111'); // checksummed address
 shortenAddress('0x1234567890abcdef...'); // 0x1234...cdef
-checksumAddress('0x...'); // EIP-55 checksummed
+checksumAddress('0x1111111111111111111111111111111111111111'); // EIP-55 checksummed
 ```
 
 ### Hex Utilities

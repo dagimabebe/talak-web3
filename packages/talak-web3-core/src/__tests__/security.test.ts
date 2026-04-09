@@ -19,7 +19,7 @@ describe('talakWeb3 security', () => {
       chains: [{
         id: 1,
         name: 'Mainnet',
-        rpcUrls: ['https://mainnet.infura.io/v3/YOUR-PROJECT-ID'],
+        rpcUrls: ['https://mainnet.infura.io/v3/demo-project-id'],
         nativeCurrency: { name: 'Ether', symbol: 'ETH' }
       }]
     };

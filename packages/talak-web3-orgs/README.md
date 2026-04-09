@@ -29,7 +29,7 @@ const org = await orgs.create({
 
 // Add members
 await orgs.addMember(org.id, {
-  address: '0x...',
+  address: '0x1111111111111111111111111111111111111111',
   role: 'admin',
 });
 ```

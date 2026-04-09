@@ -28,7 +28,7 @@ export class CeramicPlugin implements CeramicAdapter {
     }
 
     // Dynamic import keeps this tree-shakable
-    // TODO: Install these dependencies when needed
+    // Optional dependencies are required for runtime integration.
     // const [{ CeramicClient }, { DID }, { Ed25519Provider }, keyDidResolver] = await Promise.all([
     //   import('@ceramicnetwork/http-client'),
     //   import('dids'),

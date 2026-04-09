@@ -25,9 +25,9 @@ const tx = createTransactionBuilder({
 
 // Build transaction
 const transaction = await tx.build({
-  to: '0x...',
+  to: '0x1111111111111111111111111111111111111111',
   value: parseEther('1.0'),
-  data: '0x...',
+  data: '0x1111111111111111111111111111111111111111',
 });
 
 // Estimate gas
@@ -55,8 +55,8 @@ const status = await tx.getStatus(hash);
 ```typescript
 // Send multiple transactions
 const hashes = await tx.batch([
-  { to: '0x...', value: parseEther('0.1') },
-  { to: '0x...', value: parseEther('0.2') },
+  { to: '0x1111111111111111111111111111111111111111', value: parseEther('0.1') },
+  { to: '0x1111111111111111111111111111111111111111', value: parseEther('0.2') },
 ]);
 ```
 

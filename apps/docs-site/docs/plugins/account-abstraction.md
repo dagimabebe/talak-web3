@@ -18,5 +18,5 @@ const b3 = talakWeb3({
 });
 
 // Send a gasless transaction
-const hash = await b3.aa.sendGasless('0x...', '0x...');
+const hash = await b3.aa.sendGasless('0x1111111111111111111111111111111111111111', '0x1111111111111111111111111111111111111111');
 ```

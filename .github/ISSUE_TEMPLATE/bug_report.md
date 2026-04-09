@@ -12,9 +12,9 @@ assignees: ''
 
 ## Steps to Reproduce
 
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
+1. Go to the affected page
+2. Click on the relevant action
+3. Scroll to the failing section
 4. See error
 
 ## Expected Behavior

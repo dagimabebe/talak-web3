@@ -20,8 +20,8 @@ const app = talakWeb3({
   },
   rpc: {
     providers: [
-      { url: 'https://eth-mainnet.g.alchemy.com/v2/...', weight: 1 },
-      { url: 'https://mainnet.infura.io/v3/...', weight: 1 },
+      { url: 'https://eth-mainnet.g.alchemy.com/v2/demo_api_key', weight: 1 },
+      { url: 'https://mainnet.infura.io/v3/demo_project_id', weight: 1 },
     ],
   },
 });
@@ -62,7 +62,7 @@ Verifies a SIWE signature.
 
 ```typescript
 const result = await app.context.auth.verifySignature(message, signature);
-// Returns: { valid: true, address: "0x..." }
+// Returns: { valid: true, address: "0x1111111111111111111111111111111111111111" }
 ```
 
 ##### `createSession(address, chainId)`
@@ -118,7 +118,7 @@ Makes an RPC request.
 
 ```typescript
 const balance = await app.context.rpc.request(1, 'eth_getBalance', [
-  '0x...',
+  '0x1111111111111111111111111111111111111111',
   'latest',
 ]);
 ```
@@ -333,9 +333,9 @@ app.use('/api/*', authMiddleware({
 ```typescript
 import { isAddress, getAddress, shortenAddress } from 'talak-web3';
 
-isAddress('0x...');           // true/false
-getAddress('0x...');          // checksummed address
-shortenAddress('0x...');      // "0x1234...5678"
+isAddress('0x1111111111111111111111111111111111111111');           // true/false
+getAddress('0x1111111111111111111111111111111111111111');          // checksummed address
+shortenAddress('0x1111111111111111111111111111111111111111');      // "0x1234567890abcdef1234567890abcdef12345678"
 ```
 
 ### Formatting

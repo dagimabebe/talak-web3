@@ -62,7 +62,7 @@ import { useContract } from '@talak-web3/hooks';
 
 function TokenBalance() {
   const { read, write } = useContract({
-    address: '0x...',
+    address: '0x1111111111111111111111111111111111111111',
     abi: ERC20_ABI,
   });
 
@@ -81,7 +81,7 @@ import { useBalance } from '@talak-web3/hooks';
 
 function Balance() {
   const { data: balance, isLoading } = useBalance({
-    address: '0x...',
+    address: '0x1111111111111111111111111111111111111111',
   });
 
   return <div>{isLoading ? 'Loading...' : `${balance} ETH`}</div>;

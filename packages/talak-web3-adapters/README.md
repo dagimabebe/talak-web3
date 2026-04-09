@@ -28,7 +28,7 @@ const ceramic = new CeramicAdapter({
 
 // Create a stream
 const stream = await ceramic.createTile({
-  content: { name: 'My Profile', avatar: '...' },
+  content: { name: 'My Profile', avatar: 'example-value' },
 });
 ```
 

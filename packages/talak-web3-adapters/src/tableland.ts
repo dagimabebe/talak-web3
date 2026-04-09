@@ -21,7 +21,7 @@ export class TablelandPlugin implements TablelandAdapter {
       });
     }
 
-    // TODO: Install these dependencies when needed
+    // Optional dependencies are required for runtime integration.
     // const [{ Database }, { Wallet, JsonRpcProvider }] = await Promise.all([
     //   import('@tableland/sdk'),
     //   import('ethers'),

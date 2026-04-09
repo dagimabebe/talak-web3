@@ -16,6 +16,5 @@ Middleware-level checks prevent sensitive data leaks and ensure all requests ori
 ### 4. Plugin System
 Extend functionality with specialized plugins for:
 - Account Abstraction (ERC-4337)
-- AI Agents
 - Cross-chain Messaging
 - Real-time Subscriptions

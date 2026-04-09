@@ -23,14 +23,14 @@ const analytics = createAnalyticsEngine({
 
 // Track wallet connection
 analytics.track('wallet_connected', {
-  address: '0x...',
+  address: '0x1111111111111111111111111111111111111111',
   chainId: 1,
   connector: 'metamask',
 });
 
 // Track transaction
 analytics.track('transaction_sent', {
-  hash: '0x...',
+  hash: '0x1111111111111111111111111111111111111111',
   value: '1.5',
   token: 'ETH',
 });

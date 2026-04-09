@@ -18,19 +18,19 @@ pnpm add @talak-web3/rpc
 import { createRpcClient } from '@talak-web3/rpc';
 
 const rpc = createRpcClient({
-  url: 'https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY',
+  url: 'https://eth-mainnet.g.alchemy.com/v2/demo_api_key',
   chainId: 1,
 });
 
 // Get balance
 const balance = await rpc.getBalance({
-  address: '0x...',
+  address: '0x1111111111111111111111111111111111111111',
   blockTag: 'latest',
 });
 
 // Send transaction
 const hash = await rpc.sendTransaction({
-  to: '0x...',
+  to: '0x1111111111111111111111111111111111111111',
   value: 1000000000000000000n,
 });
 ```
