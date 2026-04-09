@@ -82,11 +82,11 @@ function App() {
 | Package | Version | Description |
 |---------|---------|-------------|
 | `talak-web3` | [![npm](https://img.shields.io/npm/v/talak-web3)](https://www.npmjs.com/package/talak-web3) | Unified SDK entrypoint |
-| `@talak-web3/auth` | [![npm](https://img.shields.io/npm/v/@talak-web3/auth)](https://www.npmjs.com/package/@talak-web3/auth) | SIWE and session lifecycle |
-| `@talak-web3/rpc` | [![npm](https://img.shields.io/npm/v/@talak-web3/rpc)](https://www.npmjs.com/package/@talak-web3/rpc) | Provider routing and failover |
-| `@talak-web3/tx` | [![npm](https://img.shields.io/npm/v/@talak-web3/tx)](https://www.npmjs.com/package/@talak-web3/tx) | Account abstraction helpers |
-| `@talak-web3/hooks` | [![npm](https://img.shields.io/npm/v/@talak-web3/hooks)](https://www.npmjs.com/package/@talak-web3/hooks) | React hooks and providers |
-| `@talak-web3/cli` | [![npm](https://img.shields.io/npm/v/@talak-web3/cli)](https://www.npmjs.com/package/@talak-web3/cli) | CLI tooling and scaffolding |
+| `@talak-web3/auth` | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Fauth)](https://www.npmjs.com/package/@talak-web3/auth) | SIWE and session lifecycle |
+| `@talak-web3/rpc` | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Frpc)](https://www.npmjs.com/package/@talak-web3/rpc) | Provider routing and failover |
+| `@talak-web3/tx` | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Ftx)](https://www.npmjs.com/package/@talak-web3/tx) | Account abstraction helpers |
+| `@talak-web3/hooks` | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Fhooks)](https://www.npmjs.com/package/@talak-web3/hooks) | React hooks and providers |
+| `@talak-web3/cli` | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Fcli)](https://www.npmjs.com/package/@talak-web3/cli) | CLI tooling and scaffolding |
 
 ## Development
 
@@ -129,6 +129,7 @@ pnpm typecheck
 ## Documentation
 
 - [Getting Started](./docs/MINIMAL_SETUP.md) - First steps with talak-web3
+- [Package Ecosystem](./docs/PACKAGE_ECOSYSTEM.md) - Published package catalog and install names
 - [Architecture](./docs/ARCHITECTURE.md) - System design and patterns
 - [Security](./docs/SECURITY_ARCHITECTURE.md) - Security architecture and threat model
 - [Threat Model](./docs/THREAT_MODEL.md) - Comprehensive threat analysis
@@ -144,11 +145,11 @@ See [GitHub Releases](https://github.com/dagimabebe/talak-web3/releases) for cha
 | Package | Version | Description |
 |---------|---------|-------------|
 | [`talak-web3`](https://www.npmjs.com/package/talak-web3) | [![npm](https://img.shields.io/npm/v/talak-web3.svg)](https://www.npmjs.com/package/talak-web3) | Core SDK with all features |
-| [`@talak-web3/core`](https://www.npmjs.com/package/@talak-web3/core) | [![npm](https://img.shields.io/npm/v/@talak-web3/core.svg)](https://www.npmjs.com/package/@talak-web3/core) | Core orchestrator |
-| [`@talak-web3/auth`](https://www.npmjs.com/package/@talak-web3/auth) | [![npm](https://img.shields.io/npm/v/@talak-web3/auth.svg)](https://www.npmjs.com/package/@talak-web3/auth) | SIWE authentication |
-| [`@talak-web3/rpc`](https://www.npmjs.com/package/@talak-web3/rpc) | [![npm](https://img.shields.io/npm/v/@talak-web3/rpc.svg)](https://www.npmjs.com/package/@talak-web3/rpc) | RPC resilience layer |
-| [`@talak-web3/hooks`](https://www.npmjs.com/package/@talak-web3/hooks) | [![npm](https://img.shields.io/npm/v/@talak-web3/hooks.svg)](https://www.npmjs.com/package/@talak-web3/hooks) | React hooks |
-| [`@talak-web3/types`](https://www.npmjs.com/package/@talak-web3/types) | [![npm](https://img.shields.io/npm/v/@talak-web3/types.svg)](https://www.npmjs.com/package/@talak-web3/types) | TypeScript types |
+| [`@talak-web3/core`](https://www.npmjs.com/package/@talak-web3/core) | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Fcore.svg)](https://www.npmjs.com/package/@talak-web3/core) | Core orchestrator |
+| [`@talak-web3/auth`](https://www.npmjs.com/package/@talak-web3/auth) | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Fauth.svg)](https://www.npmjs.com/package/@talak-web3/auth) | SIWE authentication |
+| [`@talak-web3/rpc`](https://www.npmjs.com/package/@talak-web3/rpc) | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Frpc.svg)](https://www.npmjs.com/package/@talak-web3/rpc) | RPC resilience layer |
+| [`@talak-web3/hooks`](https://www.npmjs.com/package/@talak-web3/hooks) | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Fhooks.svg)](https://www.npmjs.com/package/@talak-web3/hooks) | React hooks |
+| [`@talak-web3/types`](https://www.npmjs.com/package/@talak-web3/types) | [![npm](https://img.shields.io/npm/v/%40talak-web3%2Ftypes.svg)](https://www.npmjs.com/package/@talak-web3/types) | TypeScript types |
 
 ## Security
 
