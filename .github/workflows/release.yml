@@ -85,8 +85,16 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Prepare package for npm
+        working-directory: talak-web3-publish
+        run: |
+          npm pkg set name="talak-web3"
+          npm pkg set publishConfig.registry="https://registry.npmjs.org"
+          npm pkg set publishConfig.access="public"
+
       - name: Publish to npm
-        run: pnpm publish --provenance --access public --no-git-checks
+        working-directory: talak-web3-publish
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
@@ -124,8 +132,16 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Prepare package for GitHub Packages
+        working-directory: talak-web3-publish
+        run: |
+          npm pkg set name="@dagimabebe/talak-web3"
+          npm pkg set publishConfig.registry="https://npm.pkg.github.com"
+          npm pkg set publishConfig.access="public"
+
       - name: Publish to GitHub Packages
-        run: pnpm publish --no-git-checks
+        working-directory: talak-web3-publish
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
