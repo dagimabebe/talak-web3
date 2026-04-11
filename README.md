@@ -95,17 +95,6 @@ pnpm lint
 pnpm typecheck
 ```
 
-## Production Checklist
-
-- [ ] Redis configured for session storage
-- [ ] HTTPS enabled with valid certificates
-- [ ] JWT secrets rotated (256-bit minimum)
-- [ ] Rate limiting at your API gateway / edge (library does not ship HTTP middleware for this)
-- [ ] CORS origins restricted
-- [ ] Audit logging enabled
-- [ ] Error tracking configured (Sentry)
-- [ ] Health checks implemented
-- [ ] Monitoring dashboards set up
 
 ## Documentation
 

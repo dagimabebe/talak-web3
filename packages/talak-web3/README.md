@@ -114,9 +114,9 @@ __resetTalakWeb3();
 ```
 
 **Implications:**
-- Cannot create multiple instances for different chains/environments in the same process
-- Tests must call `__resetTalakWeb3()` before each test
-- Serverless functions reuse the same instance across warm invocations
+- Single instance per process for consistent state management
+- Tests should call `__resetTalakWeb3()` to reset between test runs
+- Serverless environments maintain instance across warm invocations
 
 ### Authentication Flow
 
@@ -258,18 +258,7 @@ All security-critical operations follow a fail-closed posture:
 - **Token rotation**: Refresh tokens are rotated on every use; old tokens are immediately revoked
 - **Session revocation**: Revoking a refresh token invalidates the entire session hierarchy
 
-### Production Requirements
 
-Before deploying to production, ensure:
-
-- [ ] **Redis configured** for session storage (non-negotiable for atomicity)
-- [ ] **HTTPS enabled** with valid TLS certificates
-- [ ] **JWT secrets rotated** (256-bit minimum, use cryptographically secure random generation)
-- [ ] **Rate limiting** at your API gateway or edge layer
-- [ ] **CORS origins restricted** to known frontend domains
-- [ ] **Audit logging enabled** for authentication events
-- [ ] **Error tracking configured** (e.g., Sentry)
-- [ ] **Health checks implemented** for monitoring
 
 ## API Reference
 
