@@ -1,6 +1,6 @@
 {
   "name": "@talak-web3/cli",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "author": "Dagim Abebe",
   "license": "MIT",
@@ -26,7 +26,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@talak-web3/templates": "1.0.1",
+    "@talak-web3/templates": "workspace:*",
     "cac": "7.0.0"
   },
   "scripts": {

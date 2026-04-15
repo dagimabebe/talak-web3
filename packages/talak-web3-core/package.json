@@ -1,6 +1,6 @@
 {
   "name": "@talak-web3/core",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "author": "Dagim Abebe",
   "license": "MIT",
@@ -21,13 +21,13 @@
     "dist"
   ],
   "dependencies": {
-    "@talak-web3/auth": "1.0.4",
-    "@talak-web3/config": "1.0.2",
-    "@talak-web3/errors": "1.0.2",
-    "@talak-web3/hooks": "1.0.3",
-    "@talak-web3/middleware": "1.0.2",
-    "@talak-web3/rpc": "1.0.2",
-    "@talak-web3/types": "1.0.5"
+    "@talak-web3/auth": "workspace:*",
+    "@talak-web3/config": "workspace:*",
+    "@talak-web3/errors": "workspace:*",
+    "@talak-web3/hooks": "workspace:*",
+    "@talak-web3/middleware": "workspace:*",
+    "@talak-web3/rpc": "workspace:*",
+    "@talak-web3/types": "workspace:*"
   },
   "scripts": {
     "build": "tsup src/index.ts src/middleware.ts src/security.ts --format esm,cjs --clean --dts --outDir dist",

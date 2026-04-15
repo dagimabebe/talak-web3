@@ -1,6 +1,6 @@
 {
   "name": "@talak-web3/analytics",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "author": "Dagim Abebe",
   "license": "MIT",
@@ -20,7 +20,7 @@
     "dist"
   ],
   "dependencies": {
-    "@talak-web3/analytics-engine": "1.0.2"
+    "@talak-web3/analytics-engine": "workspace:*"
   },
   "scripts": {
     "build": "node ../../../node_modules/typescript/bin/tsc -p tsconfig.json",

@@ -2,10 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// Create dist directory
-if (!fs.existsSync('dist')) {
-  fs.mkdirSync('dist', { recursive: true });
-}
+// Clean dist directory to avoid shipping stale files (e.g. tests)
+fs.rmSync('dist', { recursive: true, force: true });
+fs.mkdirSync('dist', { recursive: true });
 
 // Copy source files to dist
 const srcDir = 'src';

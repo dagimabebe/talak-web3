@@ -1,6 +1,6 @@
 {
   "name": "talak-web3",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A comprehensive Web3 SDK for blockchain development",
   "type": "module",
   "main": "./dist/index.js",
@@ -34,12 +34,12 @@
     "node": ">=20.12.0"
   },
   "dependencies": {
-    "@talak-web3/core": "1.0.2",
-    "@talak-web3/client": "1.0.2",
-    "@talak-web3/config": "1.0.2",
-    "@talak-web3/types": "1.0.5",
-    "@talak-web3/hooks": "1.0.3",
-    "@talak-web3/rpc": "1.0.2",
+    "@talak-web3/core": "workspace:*",
+    "@talak-web3/client": "workspace:*",
+    "@talak-web3/config": "workspace:*",
+    "@talak-web3/types": "workspace:*",
+    "@talak-web3/hooks": "workspace:*",
+    "@talak-web3/rpc": "workspace:*",
     "ioredis": "5.10.1",
     "jose": "5.9.6",
     "viem": "2.21.54",

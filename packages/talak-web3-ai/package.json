@@ -1,6 +1,6 @@
 {
   "name": "@talak-web3/ai",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "deprecated": "This package is deprecated. Import types directly from @talak-web3/types instead. This package will be removed in the next major version.",
   "type": "module",
   "author": "Dagim Abebe",
@@ -22,11 +22,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@talak-web3/types": "1.0.5",
+    "@talak-web3/types": "workspace:*",
     "openai": "5.23.2"
   },
   "scripts": {
-    "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && node ../../node_modules/typescript/bin/tsc -p tsconfig.json",
     "typecheck": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "test": "node ../../node_modules/vitest/vitest.mjs run --passWithNoTests",
     "lint": "node -e \"process.exit(0)\"",

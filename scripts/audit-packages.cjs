@@ -16,7 +16,14 @@ function rel(p) {
   return path.relative(process.cwd(), p).replace(/\\/g, '/');
 }
 
-function isLooseRange(v) {
+function isWorkspacePkg(name) {
+  return name === 'talak-web3' || name.startsWith('@talak-web3/');
+}
+
+function isLooseRange(depName, v) {
+  if (isWorkspacePkg(depName) && v === 'workspace:*') {
+    return false;
+  }
   return (
     v === '*' ||
     v.startsWith('^') ||
@@ -67,7 +74,7 @@ for (const p of packageJsonPaths) {
   const deps = Object.assign({}, j.dependencies, j.devDependencies, j.peerDependencies, j.optionalDependencies);
   for (const [k, v] of Object.entries(deps || {})) {
     if (typeof v !== 'string') continue;
-    if (isLooseRange(v)) issues.push({ pkg, type: 'dep-range', msg: `${k}@${v}` });
+    if (isLooseRange(k, v)) issues.push({ pkg, type: 'dep-range', msg: `${k}@${v}` });
   }
 }
 

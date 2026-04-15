@@ -1,6 +1,6 @@
 {
   "name": "@talak-web3/plugins",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "author": "Dagim Abebe",
   "license": "MIT",
@@ -21,7 +21,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@talak-web3/types": "1.0.5"
+    "@talak-web3/types": "workspace:*"
   },
   "scripts": {
     "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json",
