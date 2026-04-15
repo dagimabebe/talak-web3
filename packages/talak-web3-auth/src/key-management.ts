@@ -327,32 +327,51 @@ export class JwtManager {
   } = {}): Promise<string> {
     const { kid } = await this.keyProvider.getCurrentSigningKeyInfo();
     
-    // Remote signing operation:
-    // 1. Construct the JWT header + payload
-    // 2. Hash and sign remotely via KeyProvider.sign
-    
-    const jwt = new SignJWT(payload)
-      .setProtectedHeader({ alg: 'RS256', kid })
-      .setIssuedAt();
+    // `jose`'s `SignJWT.sign()` requires a local key. Since `KeyProvider.sign()` is a
+    // remote signing primitive (KMS/HSM), we build the JWT JWS compact form manually:
+    // BASE64URL(header) + "." + BASE64URL(payload) is the "tbs" bytes to sign.
+    const nowSec = Math.floor(Date.now() / 1000);
+    const jwtPayload: Record<string, unknown> = { ...(payload ?? {}) };
+    jwtPayload.iat = nowSec;
+    if (options.issuer) jwtPayload.iss = options.issuer;
+    if (options.audience) jwtPayload.aud = options.audience;
+    if (options.subject) jwtPayload.sub = options.subject;
+    if (options.jti) jwtPayload.jti = options.jti;
+    if (options.expiresIn !== undefined) {
+      const exp = typeof options.expiresIn === 'number'
+        ? nowSec + options.expiresIn
+        : nowSec + this.parseExpiresInToSeconds(options.expiresIn);
+      jwtPayload.exp = exp;
+    }
 
-    if (options.issuer) jwt.setIssuer(options.issuer);
-    if (options.audience) jwt.setAudience(options.audience);
-    if (options.expiresIn) jwt.setExpirationTime(options.expiresIn);
-    if (options.subject) jwt.setSubject(options.subject);
-    if (options.jti) jwt.setJti(options.jti);
+    const protectedHeader = { alg: 'RS256', kid, typ: 'JWT' } as const;
+    const encodedHeader = Buffer.from(JSON.stringify(protectedHeader)).toString('base64url');
+    const encodedPayload = Buffer.from(JSON.stringify(jwtPayload)).toString('base64url');
+    const tbs = Buffer.from(`${encodedHeader}.${encodedPayload}`);
+    const signature = await this.keyProvider.sign(tbs);
+    const encodedSig = Buffer.from(signature).toString('base64url');
+    return `${encodedHeader}.${encodedPayload}.${encodedSig}`;
+  }
 
-    // Instead of local sign, we need a way to use the remote provider.
-    // Jose's SignJWT.sign() takes a key. We can provide a custom sign function if supported,
-    // but the simplest is to let Jose do the header/payload encoding and then sign.
-    
-    //jose's sign() expects a KeyLike or a function that returns one.
-    //For remote signing, we can use the KeyProvider's sign method.
-    
-    // jose provides a way to use custom signing functions:
-    return jwt.sign(async (protectedHeader: JWSHeaderParameters, tbs: Uint8Array) => {
-        // tbs is the "to be signed" Uint8Array
-        return this.keyProvider.sign(tbs);
-    });
+  private parseExpiresInToSeconds(value: string): number {
+    const trimmed = value.trim();
+    const match = /^(\d+)\s*([smhd])$/i.exec(trimmed);
+    if (!match) {
+      throw new TalakWeb3Error(`Invalid expiresIn format: ${value}`, {
+        code: 'AUTH_INVALID_EXPIRES_IN',
+        status: 400,
+      });
+    }
+    const amount = Number(match[1]!);
+    const unit = match[2]!.toLowerCase();
+    switch (unit) {
+      case 's': return amount;
+      case 'm': return amount * 60;
+      case 'h': return amount * 60 * 60;
+      case 'd': return amount * 24 * 60 * 60;
+      default:
+        return amount;
+    }
   }
 
   async verify(token: string, options: {

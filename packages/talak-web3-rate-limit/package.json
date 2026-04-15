@@ -4,6 +4,7 @@
   "description": "Rate limiting utilities for talak-web3",
   "type": "module",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
@@ -22,7 +23,7 @@
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
-    "ioredis": "^5.0.0"
+    "ioredis": "5.0.0"
   },
   "peerDependenciesMeta": {
     "ioredis": {

@@ -1,4 +1,5 @@
-import { exportSPKI, importSPKI, type KeyLike } from 'jose';
+import { exportSPKI, type KeyLike } from 'jose';
+import { createHash } from 'node:crypto';
 import { TalakWeb3Error } from '@talak-web3/errors';
 
 // ---------------------------------------------------------------------------
@@ -54,11 +55,14 @@ export class JwksManager {
       this.primaryKid = kid;
     }
     
-    this.keys.set(kid, {
+    const record: { publicKey: KeyLike; privateKey?: KeyLike; createdAt: number } = {
       publicKey,
-      privateKey,
       createdAt: Date.now(),
-    });
+    };
+    if (privateKey !== undefined) {
+      record.privateKey = privateKey;
+    }
+    this.keys.set(kid, record);
 
     // Clean up old keys if we exceed maxKeys
     this.cleanupOldKeys();
@@ -191,8 +195,10 @@ export class JwksManager {
 
     const excessCount = sortedKeys.length - (this.config.maxKeys - 1);
     if (excessCount > 0) {
-      for (let i = 0; i < excessCount; i++) {
-        keysToRemove.push(sortedKeys[i][0]);
+      const toRemove = Math.min(excessCount, sortedKeys.length);
+      for (let i = 0; i < toRemove; i++) {
+        const entry = sortedKeys[i];
+        if (entry) keysToRemove.push(entry[0]);
       }
     }
 
@@ -212,7 +218,6 @@ export class JwksManager {
    * Compute X.509 certificate thumbprint (SHA-1)
    */
   private computeX5t(spki: string): string {
-    const { createHash } = require('node:crypto');
     const hash = createHash('sha1');
     hash.update(spki.replace(/-----BEGIN PUBLIC KEY-----\n/, '')
       .replace(/\n-----END PUBLIC KEY-----/, '')

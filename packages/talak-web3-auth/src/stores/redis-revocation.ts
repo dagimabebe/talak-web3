@@ -25,6 +25,10 @@ export class RedisRevocationStore implements RevocationStore {
     return `${this.prefix}${jti}`;
   }
 
+  private globalKey(): string {
+    return `${this.prefix}global_invalidation`;
+  }
+
   async revoke(jti: string, expiresAtMs: number): Promise<void> {
     const ttl = Math.max(1, expiresAtMs - Date.now());
     try {
@@ -42,6 +46,31 @@ export class RedisRevocationStore implements RevocationStore {
     try {
       const v = await this.redis.get(this.key(jti));
       return v !== null;
+    } catch (err) {
+      throw new TalakWeb3Error('Redis revocation store failure', {
+        code: 'AUTH_REDIS_REVOCATION_ERROR',
+        status: 503,
+        cause: err,
+      });
+    }
+  }
+
+  async setGlobalInvalidationTime(timestampSeconds: number): Promise<void> {
+    try {
+      await this.redis.set(this.globalKey(), timestampSeconds.toString());
+    } catch (err) {
+      throw new TalakWeb3Error('Redis revocation store failure', {
+        code: 'AUTH_REDIS_REVOCATION_ERROR',
+        status: 503,
+        cause: err,
+      });
+    }
+  }
+
+  async getGlobalInvalidationTime(): Promise<number> {
+    try {
+      const v = await this.redis.get(this.globalKey());
+      return v ? parseInt(v, 10) : 0;
     } catch (err) {
       throw new TalakWeb3Error('Redis revocation store failure', {
         code: 'AUTH_REDIS_REVOCATION_ERROR',

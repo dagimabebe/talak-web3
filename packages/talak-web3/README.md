@@ -95,28 +95,10 @@ const polygonBlock = await router.request(137, 'eth_blockNumber');
 
 ## Core Concepts
 
-### Singleton Pattern
+### Instance lifecycle
 
-`talakWeb3()` uses a singleton pattern — only one instance is created per process. This ensures consistent state across your application.
-
-```typescript
-import { talakWeb3, __resetTalakWeb3 } from 'talak-web3';
-
-// First call creates the instance
-const app1 = talakWeb3(config);
-
-// Subsequent calls return the same instance
-const app2 = talakWeb3(config);
-app1 === app2; // true
-
-// For testing: reset the singleton
-__resetTalakWeb3();
-```
-
-**Implications:**
-- Single instance per process for consistent state management
-- Tests should call `__resetTalakWeb3()` to reset between test runs
-- Serverless environments maintain instance across warm invocations
+`talakWeb3()` returns a **new instance** on each call (no global singleton state).  
+`__resetTalakWeb3()` is retained for backwards compatibility and is a **no-op**.
 
 ### Authentication Flow
 

@@ -1,9 +1,14 @@
-import type { RedisClientType } from 'redis';
 import { TalakWeb3Error } from '@talak-web3/errors';
+
+export interface RedisLike {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, options?: Record<string, unknown>): Promise<unknown>;
+  del(key: string): Promise<unknown>;
+}
 
 export interface CircuitBreakerConfig {
   /** Redis client for distributed coordination */
-  redis: RedisClientType;
+  redis: RedisLike;
   
   /** Failure threshold before opening circuit (e.g., 5 failures) */
   failureThreshold: number;
@@ -71,7 +76,7 @@ export class DistributedCircuitBreaker {
         throw new TalakWeb3Error('Circuit breaker open', {
           code: 'CIRCUIT_OPEN',
           status: 503,
-          details: { providerId, openedAt: state.openedAt }
+          data: { providerId, openedAt: state.openedAt }
         });
       }
       
@@ -80,7 +85,6 @@ export class DistributedCircuitBreaker {
         state: 'half-open',
         failures: 0,
         successes: 0,
-        openedAt: undefined
       });
     }
     
@@ -192,9 +196,9 @@ export class DistributedCircuitBreaker {
       state.lastFailure = Date.now();
       
       // Use adaptive threshold if we have enough latency data
-      const effectiveThreshold = shouldUseAdaptiveThreshold ? 
-        this.calculateAdaptiveThreshold(providerId, state) : 
-        this.config.failureThreshold;
+      const effectiveThreshold = shouldUseAdaptiveThreshold
+        ? await this.calculateAdaptiveThreshold(providerId)
+        : this.config.failureThreshold;
       
       // Check if we should open the circuit
       if (state.state === 'closed' && state.failures >= effectiveThreshold) {
@@ -282,21 +286,22 @@ export class DistributedCircuitBreaker {
       
       if (!data) return false;
       
-      const stats = JSON.parse(data) as CircuitState['latencyStats'];
-      return stats.count >= this.config.minRequestsForLatency;
+      const stats = JSON.parse(data) as CircuitState['latencyStats'] | undefined;
+      return !!stats && typeof stats.count === 'number' && stats.count >= this.config.minRequestsForLatency;
     } catch {
       return false;
     }
   }
 
-  private async calculateAdaptiveThreshold(providerId: string, state: CircuitState): Promise<number> {
+  private async calculateAdaptiveThreshold(providerId: string): Promise<number> {
     try {
       const key = this.getLatencyKey(providerId);
       const data = await this.config.redis.get(key);
       
       if (!data) return this.config.failureThreshold;
       
-      const stats = JSON.parse(data) as CircuitState['latencyStats'];
+      const stats = JSON.parse(data) as CircuitState['latencyStats'] | undefined;
+      if (!stats || typeof stats.average !== 'number') return this.config.failureThreshold;
       
       // Calculate adaptive threshold based on latency deviation
       const baseThreshold = this.config.failureThreshold;

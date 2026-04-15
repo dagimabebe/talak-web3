@@ -181,6 +181,15 @@ export function createTalakWeb3(input: unknown = {}): TalakWeb3Instance {
       request: async () => {
         throw new TalakWeb3Error('RPC not initialized', { code: 'RPC_NOT_READY', status: 500 });
       },
+      pauseHealthChecks: () => {
+        throw new TalakWeb3Error('RPC not initialized', { code: 'RPC_NOT_READY', status: 500 });
+      },
+      resumeHealthChecks: () => {
+        throw new TalakWeb3Error('RPC not initialized', { code: 'RPC_NOT_READY', status: 500 });
+      },
+      stop: () => {
+        // noop: used during shutdown paths
+      },
     },
   };
   const rpc = new UnifiedRpc(bootstrapContext, endpoints);
@@ -224,7 +233,7 @@ export function createTalakWeb3(input: unknown = {}): TalakWeb3Instance {
     async destroy() {
       for (const plugin of plugins.values()) {
         if (plugin.teardown) {
-          await plugin.teardown(context);
+          await plugin.teardown();
         }
       }
       plugins.clear();
@@ -240,6 +249,13 @@ export function createTalakWeb3(input: unknown = {}): TalakWeb3Instance {
  */
 export function talakWeb3(input: unknown = {}): TalakWeb3Instance {
   return createTalakWeb3(input);
+}
+
+/**
+ * Test-only hook retained for backwards compatibility.
+ */
+export function __resetTalakWeb3(): void {
+  // No global singleton state to reset anymore.
 }
 
 function isTalakWeb3Plugin(input: unknown): input is TalakWeb3Plugin {

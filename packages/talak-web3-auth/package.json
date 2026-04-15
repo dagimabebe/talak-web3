@@ -27,11 +27,11 @@
     "README.md"
   ],
   "dependencies": {
-    "@talak-web3/errors": "workspace:*",
-    "@talak-web3/types": "workspace:*",
-    "ioredis": "^5.10.1",
-    "jose": "^5.9.6",
-    "viem": "^2.21.54"
+    "@talak-web3/errors": "1.0.2",
+    "@talak-web3/types": "1.0.5",
+    "ioredis": "5.10.1",
+    "jose": "5.9.6",
+    "viem": "2.21.54"
   },
   "scripts": {
     "build": "tsup",

@@ -59,7 +59,8 @@ export class UnifiedRpc implements IRpc {
    * Configure distributed circuit breaker for per-provider isolation
    */
   configureCircuitBreaker(config: Omit<CircuitBreakerConfig, 'redis'>): void {
-    if (!this.ctx.redis) {
+    const redis = (this.ctx as any).redis as CircuitBreakerConfig['redis'] | undefined;
+    if (!redis) {
       throw new TalakWeb3Error('Redis client required for distributed circuit breaker', {
         code: 'CONFIG_ERROR',
         status: 500
@@ -68,7 +69,7 @@ export class UnifiedRpc implements IRpc {
     
     this.circuitBreaker = new DistributedCircuitBreaker({
       ...config,
-      redis: this.ctx.redis
+      redis
     });
   }
 

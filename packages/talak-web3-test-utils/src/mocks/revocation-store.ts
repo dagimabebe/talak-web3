@@ -10,6 +10,7 @@ import type { RevocationStore } from '@talak-web3/auth';
  */
 export class MockRevocationStore implements RevocationStore {
   private revokedTokens = new Map<string, number>(); // jti -> expiresAt
+  private globalInvalidationAt = 0;
   private operationLog: Array<{
     operation: 'revoke' | 'check';
     jti: string;
@@ -108,5 +109,13 @@ export class MockRevocationStore implements RevocationStore {
     }
     
     return cleaned;
+  }
+
+  async setGlobalInvalidationTime(timestampSeconds: number): Promise<void> {
+    this.globalInvalidationAt = timestampSeconds;
+  }
+
+  async getGlobalInvalidationTime(): Promise<number> {
+    return this.globalInvalidationAt;
   }
 }

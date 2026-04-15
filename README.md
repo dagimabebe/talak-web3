@@ -47,14 +47,10 @@ Consult [`docs/MINIMAL_SETUP.md`](./docs/MINIMAL_SETUP.md) and the [`@talak-web3
 
 `talak-web3/react` re-exports hooks from `@talak-web3/hooks` (e.g. `TalakWeb3Provider`, `useTalakWeb3`, `useAccount`, `useChain`). Wire your own SIWE signing flow against your API; there is no `useSIWE` helper in the current release.
 
-### ⚠️ Singleton Pattern Notice
+### Instance lifecycle
 
-**Important**: `talakWeb3()` uses a singleton pattern - only one instance is created per process. This means:
-- You cannot create multiple instances for different chains/environments
-- Tests must call `__resetTalakWeb3()` before each test
-- Serverless functions will reuse the same instance across warm invocations
-
-See [`docs/SINGLETON_PATTERN.md`](./docs/SINGLETON_PATTERN.md) for details and workarounds.
+`talakWeb3()` returns a **new instance** on each call (no global singleton state).  
+`__resetTalakWeb3()` is retained for backwards compatibility and is a **no-op**.
 
 ## Package ecosystem
 

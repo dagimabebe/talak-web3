@@ -7,6 +7,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -18,15 +21,15 @@
     "README.md"
   ],
   "dependencies": {
-    "@ceramicnetwork/http-client": "^2.33.0",
-    "@ceramicnetwork/stream-tile": "^2.33.0",
-    "@tableland/sdk": "^7.2.1",
-    "@talak-web3/errors": "workspace:*",
-    "@talak-web3/types": "workspace:*",
-    "dids": "^4.0.0",
-    "ethers": "^6.13.4",
-    "key-did-provider-ed25519": "^3.0.0",
-    "key-did-resolver": "^3.0.0"
+    "@ceramicnetwork/http-client": "2.33.0",
+    "@ceramicnetwork/stream-tile": "2.33.0",
+    "@tableland/sdk": "7.2.1",
+    "@talak-web3/errors": "1.0.2",
+    "@talak-web3/types": "1.0.5",
+    "dids": "4.0.0",
+    "ethers": "6.13.4",
+    "key-did-provider-ed25519": "3.0.0",
+    "key-did-resolver": "3.0.0"
   },
   "scripts": {
     "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json",

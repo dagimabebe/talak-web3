@@ -14,13 +14,14 @@
     }
   },
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "README.md"
   ],
   "dependencies": {
-    "@talak-web3/types": "workspace:*",
+    "@talak-web3/types": "1.0.5",
     "react": ">=18"
   },
   "peerDependencies": {

@@ -7,6 +7,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -18,12 +21,12 @@
     "README.md"
   ],
   "dependencies": {
-    "@talak-web3/errors": "workspace:*",
-    "@talak-web3/types": "workspace:*",
-    "@talak-web3/utils": "workspace:*"
+    "@talak-web3/errors": "1.0.2",
+    "@talak-web3/types": "1.0.5",
+    "@talak-web3/utils": "1.0.2"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --tsconfig tsconfig.tsup.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

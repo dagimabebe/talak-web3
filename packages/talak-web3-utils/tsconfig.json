@@ -7,9 +7,13 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "baseUrl": ".",
     "paths": {
-      "@talak-web3/types": ["../talak-web3-types/src/index.ts"]
+      "@talak-web3/types": ["../talak-web3-types/src/index.ts"],
+      "@talak-web3/errors": ["../talak-web3-errors/src/index.ts"]
     }
   },
-  "references": [{ "path": "../talak-web3-types" }],
+  "references": [
+    { "path": "../talak-web3-types" },
+    { "path": "../talak-web3-errors" }
+  ],
   "include": ["src/**/*.ts"]
 }

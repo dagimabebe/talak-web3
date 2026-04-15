@@ -15,6 +15,9 @@
       "default": "./dist/index.js"
     }
   },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "README.md"
@@ -23,8 +26,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@talak-web3/templates": "workspace:*",
-    "cac": "^7.0.0"
+    "@talak-web3/templates": "1.0.1",
+    "cac": "7.0.0"
   },
   "scripts": {
     "build": "tsup",

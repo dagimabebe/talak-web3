@@ -8,6 +8,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -29,15 +32,15 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@talak-web3/auth": "workspace:*",
-    "@talak-web3/core": "workspace:*",
-    "@talak-web3/errors": "workspace:*",
-    "@talak-web3/types": "workspace:*",
-    "viem": "^2.21.54"
+    "@talak-web3/auth": "1.0.4",
+    "@talak-web3/core": "1.0.2",
+    "@talak-web3/errors": "1.0.2",
+    "@talak-web3/types": "1.0.5",
+    "viem": "2.21.54"
   },
   "devDependencies": {
-    "@types/node": "^22.13.1",
-    "typescript": "^5.7.3",
-    "vitest": "^2.1.9"
+    "@types/node": "22.13.1",
+    "typescript": "5.7.3",
+    "vitest": "2.1.9"
   }
 }

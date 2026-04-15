@@ -8,6 +8,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,8 +22,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@talak-web3/types": "workspace:*",
-    "openai": "^5.23.2"
+    "@talak-web3/types": "1.0.5",
+    "openai": "5.23.2"
   },
   "scripts": {
     "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json",
@@ -30,6 +33,6 @@
     "clean": "node -e \"process.exit(0)\""
   },
   "devDependencies": {
-    "vitest": "^2.1.9"
+    "vitest": "2.1.9"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateAddress, isValidHash, shortenAddress } from '../src/index.js';
+import { validateAddress, isValidHash, shortenAddress } from '../index.js';
 
 describe('Address Utilities', () => {
   describe('validateAddress', () => {

@@ -8,6 +8,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -19,7 +22,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@talak-web3/types": "workspace:*"
+    "@talak-web3/types": "1.0.5"
   },
   "scripts": {
     "build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json",
