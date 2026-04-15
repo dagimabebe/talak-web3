@@ -25,4 +25,8 @@ export interface RefreshStore {
 export interface RevocationStore {
   revoke(jti: string, expiresAtMs: number): Promise<void>;
   isRevoked(jti: string): Promise<boolean>;
+  
+  /** Global invalidation (catastrophic failure handling) */
+  setGlobalInvalidationTime(timestampSeconds: number): Promise<void>;
+  getGlobalInvalidationTime(): Promise<number>;
 }

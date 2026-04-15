@@ -25,17 +25,17 @@ export class MultiChainRouter {
   }
 
   listChains(): ChainRef[] {
-    return this.config.chains.map((c) => ({ id: c.id, name: c.name, rpcUrls: c.rpcUrls }));
+    return this.config.chains.map((c: any) => ({ id: c.id, name: c.name, rpcUrls: c.rpcUrls }));
   }
 
   getRpc(chainId: number): IRpc {
     const existing = this.rpcByChainId.get(chainId);
     if (existing) return existing;
 
-    const chain = this.config.chains.find((c) => c.id === chainId);
+    const chain = this.config.chains.find((c: any) => c.id === chainId);
     if (!chain) throw new Error(`Unknown chainId: ${chainId}`);
 
-    const endpoints = chain.rpcUrls.map((url, priority) => ({ url, priority }));
+    const endpoints = chain.rpcUrls.map((url: string, priority: number) => ({ url, priority }));
     const rpc = new UnifiedRpc(this.ctx, endpoints);
     this.rpcByChainId.set(chainId, rpc);
     return rpc;

@@ -166,30 +166,35 @@ function getTemplateDevDependencies(template: string): Record<string, string> {
 }
 
 function generateConfig(template: string): string {
-  return `import { talakWeb3 } from 'talak-web3';
+  return `import { createTalakWeb3 } from 'talak-web3';
 import { MainnetPreset } from 'talak-web3/presets';
 
-export const app = talakWeb3({
+// Application configuration
+export const app = createTalakWeb3({
   ...MainnetPreset,
   auth: {
     domain: process.env.SIWE_DOMAIN || 'localhost:3000',
-    secret: process.env.JWT_SECRET!,
+    // Stores are mandatory in production
+    nonceStore: undefined, // Provide Redis-backed store
+    refreshStore: undefined, // Provide Redis-backed store
+    revocationStore: undefined, // Provide Redis-backed store
   },
 });
 
-// Initialize on startup
+// Initialize on startup (Mandatory)
 await app.init();
 `;
 }
 
 function generateEnv(): string {
-  return `# talak-web3 Environment Configuration
+  return `# talak-web3 Environment Configuration (Production-Hardened)
 # Generated on ${new Date().toISOString()}
 
-# JWT Secret (generate a strong random string)
-JWT_SECRET=${generateSecret()}
+# JWT Asymmetric Keys (RS256) - Generate with OpenSSL
+JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----"
+JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----"
 
-# Redis URL for session storage
+# Redis URL for session storage (Mandatory)
 REDIS_URL=redis://localhost:6379
 
 # SIWE Domain

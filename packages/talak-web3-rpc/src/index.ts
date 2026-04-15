@@ -1,6 +1,7 @@
 import { TalakWeb3Error } from '@talak-web3/errors';
-import type { TalakWeb3Context, IRpc, RpcOptions } from '@talak-web3/types';
+import type { TalakWeb3Context, IRpc, RpcOptions, MiddlewareHandler } from '@talak-web3/types';
 import { DistributedCircuitBreaker, type CircuitBreakerConfig } from './circuit-breaker.js';
+import { validateRpcRequest } from './validation.js';
 
 export interface RpcEndpoint {
   url: string;
@@ -13,6 +14,15 @@ export interface RpcEndpoint {
     lastChecked: number;
   };
 }
+
+/**
+ * Security Middleware: Enforces strict input validation on RPC requests.
+ */
+export const rpcValidationMiddleware: MiddlewareHandler = async (req, next) => {
+  // Validate request before execution
+  validateRpcRequest(req);
+  return next();
+};
 
 export class UnifiedRpc implements IRpc {
   private endpoints: RpcEndpoint[];
@@ -33,6 +43,9 @@ export class UnifiedRpc implements IRpc {
       // Allow process to exit even if interval is pending
       this.healthInterval.unref?.();
     }
+    
+    // Register validation middleware as first in request chain
+    this.ctx.requestChain.use(rpcValidationMiddleware);
     
     // Cleanup on process shutdown
     const cleanup = () => {

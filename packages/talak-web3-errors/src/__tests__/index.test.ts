@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TalakWeb3Error } from '../src/index.js';
+import { TalakWeb3Error } from '../index.js';
 
 describe('TalakWeb3Error', () => {
   it('should create error with code and status', () => {

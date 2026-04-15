@@ -20,179 +20,118 @@ export interface RateLimiter {
 }
 
 // ---------------------------------------------------------------------------
-// In-Memory Rate Limiter (for development/testing)
+// Redis Rate Limiter (Production-grade, distributed)
 // ---------------------------------------------------------------------------
 
-interface MemoryBucket {
-  tokens: number;
-  lastRefill: number;
-}
+/**
+ * Sliding window rate limiting using Redis and Lua script for atomicity.
+ * Supports variable cost (token consumption) and adaptive penalties.
+ * Key structure: rate_limit:{key}
+ * Returns: { allowed(0/1), remaining, resetAtMs }
+ */
+const adaptiveSlidingWindowLua = `
+local key = KEYS[1]
+local windowMs = tonumber(ARGV[1])
+local limit = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+local cost = tonumber(ARGV[4]) or 1
+local windowStart = now - windowMs
 
-export class InMemoryRateLimiter implements RateLimiter {
-  private readonly buckets = new Map<string, MemoryBucket>();
-  private readonly capacity: number;
-  private readonly refillPerSecond: number;
+-- Cleanup expired entries
+redis.call('ZREMRANGEBYSCORE', key, '-inf', windowStart)
 
-  constructor(opts: { capacity: number; refillPerSecond: number }) {
-    this.capacity = opts.capacity;
-    this.refillPerSecond = opts.refillPerSecond;
-    console.warn(
-      '[talak-web3-rate-limit] InMemoryRateLimiter is in use. ' +
-      'This is NOT suitable for production or distributed systems. ' +
-      'Use RedisRateLimiter for production.',
-    );
-  }
-
-  async check(key: string, cost = 1): Promise<RateLimitResult> {
-    const now = Date.now();
-    let bucket = this.buckets.get(key);
-
-    // Initialize bucket if doesn't exist
-    if (!bucket) {
-      bucket = { tokens: this.capacity, lastRefill: now };
-      this.buckets.set(key, bucket);
-    }
-
-    // Refill tokens based on elapsed time
-    const elapsed = (now - bucket.lastRefill) / 1000;
-    const tokensToAdd = elapsed * this.refillPerSecond;
-    bucket.tokens = Math.min(this.capacity, bucket.tokens + tokensToAdd);
-    bucket.lastRefill = now;
-
-    // Check if enough tokens available
-    if (bucket.tokens >= cost) {
-      bucket.tokens -= cost;
-      return {
-        allowed: true,
-        remaining: Math.floor(bucket.tokens),
-        resetAt: now + ((this.capacity - bucket.tokens) / this.refillPerSecond) * 1000,
-      };
-    }
-
-    // Calculate when enough tokens will be available
-    const tokensNeeded = cost - bucket.tokens;
-    const waitTime = (tokensNeeded / this.refillPerSecond) * 1000;
-
-    return {
-      allowed: false,
-      remaining: 0,
-      resetAt: now + waitTime,
-    };
-  }
-
-  async reset(key: string): Promise<void> {
-    this.buckets.delete(key);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Redis Rate Limiter (for production)
-// ---------------------------------------------------------------------------
-
-const slidingWindowLua = `
--- KEYS[1] = limit key
--- ARGV[1] = windowMs
--- ARGV[2] = limit
--- returns: { allowed(0/1), remaining }
-
-local time = redis.call('TIME')
-local now = (tonumber(time[1]) * 1000) + math.floor(tonumber(time[2]) / 1000)
-local windowStart = now - tonumber(ARGV[1])
-
--- Remove old entries
-redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', windowStart)
-
-local currentCount = redis.call('ZCARD', KEYS[1])
+local currentCount = redis.call('ZCARD', key)
 local allowed = 0
-local remaining = tonumber(ARGV[2]) - currentCount
+local remaining = limit - currentCount
 
-if currentCount < tonumber(ARGV[2]) then
+if (currentCount + cost) <= limit then
   allowed = 1
-  redis.call('ZADD', KEYS[1], now, now .. ":" .. math.random())
-  remaining = remaining - 1
+  -- Add entries for each cost unit to correctly track capacity
+  for i=1,cost do
+    redis.call('ZADD', key, now, now .. ":" .. i .. ":" .. math.random())
+  end
+  remaining = limit - (currentCount + cost)
 end
 
-redis.call('PEXPIRE', KEYS[1], ARGV[1])
+-- Set expiry to at least the window duration
+redis.call('PEXPIRE', key, windowMs)
 
-return { allowed, remaining }
+return { allowed, remaining, now + windowMs }
 `;
 
 export class RedisRateLimiter implements RateLimiter {
-  private readonly redis: any; // ioredis or compatible client
+  private readonly redis: any;
   private readonly capacity: number;
-  private readonly refillPerSecond: number;
+  private readonly windowMs: number;
 
   constructor(
     redis: any,
-    opts: { capacity: number; refillPerSecond: number },
+    opts: { capacity: number; windowMs: number },
   ) {
+    if (!redis) throw new Error('Redis client required for distributed rate limiting');
     this.redis = redis;
     this.capacity = opts.capacity;
-    this.refillPerSecond = opts.refillPerSecond;
+    this.windowMs = opts.windowMs;
   }
 
-  async check(key: string, _cost = 1): Promise<RateLimitResult> {
-    const windowMs = (this.capacity / this.refillPerSecond) * 1000;
+  /**
+   * Checks if a request is allowed.
+   * @param key Unique identifier (IP, address, etc.)
+   * @param cost Number of tokens to consume (default: 1)
+   */
+  async check(key: string, cost = 1): Promise<RateLimitResult> {
+    const fullKey = `rate_limit:${key}`;
+    const now = Date.now();
 
-    const res = await this.redis.eval(slidingWindowLua, {
-      keys: [`ratelimit:${key}`],
-      arguments: [String(windowMs), String(this.capacity)],
-    }) as unknown;
+    const res = await this.redis.eval(
+      adaptiveSlidingWindowLua, 
+      1, 
+      fullKey, 
+      String(this.windowMs), 
+      String(this.capacity), 
+      String(now),
+      String(cost)
+    ) as unknown;
 
-    if (!Array.isArray(res) || res.length < 2) {
+    if (!Array.isArray(res) || res.length < 3) {
       return { allowed: false, remaining: 0 };
     }
 
-    const allowed = Number(res[0]) === 1;
-    const remaining = Math.max(0, Number(res[1]));
-
     return {
-      allowed,
-      remaining,
-      resetAt: Date.now() + windowMs,
+      allowed: Number(res[0]) === 1,
+      remaining: Math.max(0, Number(res[1])),
+      resetAt: Number(res[2]),
     };
   }
 
+  /**
+   * Forcefully applies a penalty by consuming tokens regardless of current state.
+   * Useful for penalizing failed auth attempts.
+   */
+  async penalize(key: string, cost: number): Promise<void> {
+    const fullKey = `rate_limit:${key}`;
+    const now = Date.now();
+    
+    // Just add tokens to the set to reduce remaining capacity
+    for (let i = 0; i < cost; i++) {
+      await this.redis.zadd(fullKey, now, `${now}:penalty:${i}:${Math.random()}`);
+    }
+    await this.redis.pexpire(fullKey, this.windowMs);
+  }
+
   async reset(key: string): Promise<void> {
-    await this.redis.del(`ratelimit:${key}`);
+    await this.redis.del(`rate_limit:${key}`);
   }
 }
 
-// ---------------------------------------------------------------------------
-// Factory function
-// ---------------------------------------------------------------------------
-
+/**
+ * Factory for production-grade rate limiters.
+ * Note: Memory fallback is disabled for security reasons.
+ */
 export function createRateLimiter(opts: {
-  type: 'memory';
-  capacity: number;
-  refillPerSecond: number;
-}): InMemoryRateLimiter;
-
-export function createRateLimiter(opts: {
-  type: 'redis';
   redis: any;
   capacity: number;
-  refillPerSecond: number;
-}): RedisRateLimiter;
-
-export function createRateLimiter(opts: {
-  type: 'memory' | 'redis';
-  redis?: any;
-  capacity: number;
-  refillPerSecond: number;
-}): RateLimiter {
-  if (opts.type === 'redis') {
-    if (!opts.redis) {
-      throw new Error('Redis client required for redis rate limiter');
-    }
-    return new RedisRateLimiter(opts.redis, {
-      capacity: opts.capacity,
-      refillPerSecond: opts.refillPerSecond,
-    });
-  }
-
-  return new InMemoryRateLimiter({
-    capacity: opts.capacity,
-    refillPerSecond: opts.refillPerSecond,
-  });
+  windowMs: number;
+}): RedisRateLimiter {
+  return new RedisRateLimiter(opts.redis, opts);
 }

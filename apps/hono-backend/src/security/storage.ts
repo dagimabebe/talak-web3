@@ -28,13 +28,20 @@ export interface AuthStorage {
   checkRateLimit(
     key: string,
     capacity: number,
-    refillsPerSecond: number
+    refillsPerSecond: number,
+    cost?: number
   ): Promise<{ allowed: boolean; remaining: number }>;
+
+  /**
+   * Apply a penalty to a rate limit key (e.g. after a failed auth attempt).
+   */
+  penalize(key: string, cost: number): Promise<void>;
 }
 
 /**
  * Production-grade Redis-backed cluster storage.
  * Enforces `fail closed` behaviors by throwing if connection drops.
+ * In-memory fallback is strictly forbidden for production security.
  */
 export class RedisAuthStorage implements AuthStorage {
   readonly nonceStore: NonceStore;
@@ -44,17 +51,20 @@ export class RedisAuthStorage implements AuthStorage {
     private readonly redis: RedisClientType,
     private readonly strictRateLimit: boolean = true
   ) {
+    if (!redis) {
+      throw new Error('CRITICAL: Redis client is required for RedisAuthStorage. In-memory fallback is disabled.');
+    }
     // We bind 5-minute hard TTL internally
     this.nonceStore = new RedisNonceStore(redis, 5 * 60_000);
     this.refreshStore = new RedisRefreshStore(redis);
   }
 
-  async checkRateLimit(key: string, capacity: number, refillsPerSecond: number): Promise<{ allowed: boolean; remaining: number }> {
+  async checkRateLimit(key: string, capacity: number, refillsPerSecond: number, cost = 1): Promise<{ allowed: boolean; remaining: number }> {
     try {
       if (!this.redis.isOpen) {
         throw new Error('Redis connection not open');
       }
-      return await rateLimitRedis(this.redis, key, { capacity, refillPerSecond: refillsPerSecond });
+      return await rateLimitRedis(this.redis, key, { capacity, refillPerSecond: refillsPerSecond, cost });
     } catch (err) {
       if (this.strictRateLimit) {
         // FAIL CLOSED with 503
@@ -64,53 +74,27 @@ export class RedisAuthStorage implements AuthStorage {
           cause: err,
         });
       }
-      return { allowed: true, remaining: capacity };
+      // This path is only reached if strictRateLimit is false (not recommended for production)
+      return { allowed: false, remaining: 0 };
     }
   }
-}
 
-/**
- * DANGER: Development-only fallback storage.
- * Using this in production will cause a runtime halt.
- */
-import { InMemoryNonceStore, InMemoryRefreshStore } from '@talak-web3/auth';
-
-export class MemoryAuthStorage implements AuthStorage {
-  readonly nonceStore: NonceStore;
-  readonly refreshStore: RefreshStore;
-  
-  private readonly buckets = new Map<string, { tokens: number; ts: number }>();
-
-  constructor() {
-    if (process.env['NODE_ENV'] === 'production') {
-      throw new Error(
-        'CRITICAL: MemoryAuthStorage instantiated in production environment. ' +
-        'This fails closed to protect the system. Provide REDIS_URL to use RedisAuthStorage.'
-      );
+  async penalize(key: string, cost: number): Promise<void> {
+    try {
+      if (!this.redis.isOpen) return;
+      const now = Date.now();
+      const windowMs = 60000; // Default window for penalties
+      const fullKey = `ratelimit:${key}`;
+      
+      // Use pipeline for atomic penalty application
+      const multi = this.redis.multi();
+      for (let i = 0; i < cost; i++) {
+        multi.zAdd(fullKey, { score: now, value: `${now}:penalty:${i}:${Math.random()}` });
+      }
+      multi.pExpire(fullKey, windowMs);
+      await multi.exec();
+    } catch (err) {
+      console.error('[RedisAuthStorage] Failed to apply penalty:', err);
     }
-    console.warn('⚠️ [MemoryAuthStorage] Using in-memory auth storage. NOT SAFE FOR PRODUCTION.');
-    
-    this.nonceStore = new InMemoryNonceStore();
-    this.refreshStore = new InMemoryRefreshStore();
-  }
-
-  async checkRateLimit(key: string, capacity: number, refillsPerSecond: number): Promise<{ allowed: boolean; remaining: number }> {
-    // Basic in-memory token bucket
-    const nowMs = Date.now();
-    let b = this.buckets.get(key);
-    if (!b) b = { tokens: capacity, ts: nowMs };
-
-    const deltaMs = Math.max(0, nowMs - b.ts);
-    const refill = (deltaMs / 1000) * refillsPerSecond;
-    b.tokens = Math.min(capacity, b.tokens + refill);
-    b.ts = nowMs;
-
-    let allowed = false;
-    if (b.tokens >= 1) {
-      allowed = true;
-      b.tokens -= 1;
-    }
-    this.buckets.set(key, b);
-    return { allowed, remaining: Math.floor(b.tokens) };
   }
 }

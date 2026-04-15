@@ -3,12 +3,12 @@
  */
 
 const KEYS = [
-  'JWT_SECRET',
+  'JWT_PRIVATE_KEY',
+  'JWT_PUBLIC_KEY',
   'REDIS_URL',
   'SIWE_DOMAIN',
   'ALLOWED_ORIGINS',
   'NODE_ENV',
-  'VITE_*',
 ] as const;
 
 export async function envCommand() {

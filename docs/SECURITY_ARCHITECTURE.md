@@ -1,167 +1,49 @@
-# Security Architecture
+# Talak-Web3 Security Architecture & Threat Model
 
-This document describes the security architecture of talak-web3, including threat models, security controls, and best practices.
+This document formalizes the security design, threat model (STRIDE), and compliance alignment for the Talak-Web3 project.
 
-## Security Principles
+## 1. STRIDE Threat Model
 
-1. **Fail-Closed**: The system fails securely rather than exposing users to risk
-2. **Defense in Depth**: Multiple layers of security controls
-3. **Least Privilege**: Minimal permissions required for operations
-4. **Zero Trust**: Verify everything, trust nothing implicitly
+| Threat | Definition | Mitigation |
+|--------|------------|------------|
+| **S**poofing | Attacker pretends to be a user or service | SIWE-based RS256 JWTs, Service-to-service request signing |
+| **T**ampering | Unauthorized data modification | Cryptographic chaining in audit logs, RS256 signatures for JWTs |
+| **R**epudiation | User denies performing an action | Immutable, tamper-evident audit logs with S3 Object Lock |
+| **I**nformation Disclosure | Sensitive data leakage | KMS-backed key management, zero private keys in memory |
+| **D**enial of Service | System is made unavailable | Adaptive rate limiting, Redis clusters separation, Priority queues |
+| **E**levation of Privilege | User gains unauthorized access | Strict JWT claim verification, Role-based policy engine |
 
-## Threat Model
+## 2. Key Compromise Protocol (Fail-Closed)
 
-### STRIDE Analysis
+In the event of a key compromise, the system maintains a < 60-second recovery window:
 
-| Threat | Description | Mitigation |
-|--------|-------------|------------|
-| **Spoofing** | Attacker impersonates legitimate user | SIWE signatures, JWT validation |
-| **Tampering** | Modification of data in transit | HTTPS, signature verification |
-| **Repudiation** | User denies performing an action | Audit logging, non-repudiable signatures |
-| **Information Disclosure** | Unauthorized access to sensitive data | Encryption at rest and in transit |
-| **Denial of Service** | System unavailability | Rate limiting, RPC health checks, response caching, retry limits |
-| **Elevation of Privilege** | Unauthorized access elevation | RBAC, permission checks |
+1. **Emergency Purge**: `TalakWeb3Auth.emergencyKeyRotation()` removes all keys from JWKS.
+2. **Global Invalidation**: Sets a `globalInvalidationAt` timestamp in Redis, invalidating all previously issued tokens.
+3. **Cluster Isolation**: Revocation lists are stored in a dedicated Redis cluster to ensure high availability and containment.
 
-### Attack Surface
+## 3. Compliance Alignment
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Attack Surface                          │
-├─────────────────────────────────────────────────────────────┤
-│  Client Layer    │  Wallet Connections, SIWE Signatures     │
-├─────────────────────────────────────────────────────────────┤
-│  API Layer       │  REST/WebSocket Endpoints, Auth Headers  │
-├─────────────────────────────────────────────────────────────┤
-│  Service Layer   │  Session Management, Token Validation    │
-├─────────────────────────────────────────────────────────────┤
-│  Data Layer      │  Redis, Database, External APIs          │
-├─────────────────────────────────────────────────────────────┤
-│  Network Layer   │  RPC Providers, Blockchain Nodes         │
-└─────────────────────────────────────────────────────────────┘
-```
+### SOC 2 / ISO 27001
+- **Access Control**: SIWE + JWT (RS256) with remote KMS signing.
+- **Audit Trails**: Immutable, cryptographically chained logs stored in WORM storage (S3 Object Lock).
+- **Vulnerability Management**: Continuous dependency scanning and security auditing.
 
-## Security Controls
+### GDPR / Privacy
+- **Data Minimization**: No PII stored on-chain; minimal session metadata.
+- **Data Deletion**: Configurable retention windows for audit logs and sessions.
 
-### Authentication
+## 4. Zero-Trust Internal Communication
 
-- **SIWE (EIP-4361)**: Cryptographic proof of wallet ownership
-- **JWT Access Tokens**: Short-lived tokens (15 minutes)
-- **Refresh Tokens**: Long-lived tokens with rotation
-- **Nonce Management**: Single-use nonces with expiration
+Internal services use **signed headers** (`X-Talak-Internal-Auth`) for all inter-component requests. Every request is verified for:
+- **Authentication**: Valid service secret.
+- **Integrity**: Signature over method, path, and body.
+- **Replay Protection**: Max skew validation (30s).
 
-### Session Security
+## 5. Third-Party Penetration Test Scope
 
-```typescript
-// Secure session configuration
-const sessionConfig = {
-  accessTokenTTL: 900,        // 15 minutes
-  refreshTokenTTL: 604800,    // 7 days
-  nonceTTL: 300,              // 5 minutes
-  maxConcurrentSessions: 5,
-  requireMFA: false,
-};
-```
-
-### Rate Limiting
-
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| `/auth/nonce` | 10 | 1 minute |
-| `/auth/verify` | 5 | 1 minute |
-| `/auth/refresh` | 10 | 1 minute |
-| `/rpc/*` | 100 | 1 minute |
-| General API | 1000 | 1 hour |
-
-### Input Validation
-
-All inputs are validated using Zod schemas:
-
-```typescript
-const SIWEMessageSchema = z.object({
-  domain: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/),
-  address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  statement: z.string().max(140).optional(),
-  uri: z.string().url(),
-  version: z.literal('1'),
-  chainId: z.number().positive(),
-  nonce: z.string().regex(/^[a-zA-Z0-9]{8,}$/),
-  issuedAt: z.string().datetime(),
-  expirationTime: z.string().datetime().optional(),
-  notBefore: z.string().datetime().optional(),
-  requestId: z.string().uuid().optional(),
-  resources: z.array(z.string().url()).optional(),
-});
-```
-
-## Cryptographic Practices
-
-### Key Management
-
-- JWT secrets: 256-bit minimum, rotated every 90 days
-- Database encryption: AES-256-GCM
-- Key derivation: PBKDF2 with 100,000 iterations
-
-### Signature Verification
-
-```typescript
-// EIP-191 personal sign verification
-const isValid = await verifyMessage({
-  address: message.address,
-  message: message.toMessage(),
-  signature: signature,
-});
-```
-
-## Security Headers
-
-```
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-X-Content-Type-Options: nosniff
-X-Frame-Options: DENY
-X-XSS-Protection: 1; mode=block
-Content-Security-Policy: default-src 'self'
-Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: geolocation=(), microphone=(), camera=()
-```
-
-## Audit Logging
-
-All security-relevant events are logged:
-
-| Event | Data Logged | Retention |
-|-------|-------------|-----------|
-| Login Success | Address, IP, User-Agent, Timestamp | 90 days |
-| Login Failure | Address, IP, Reason, Timestamp | 90 days |
-| Token Refresh | Session ID, IP, Timestamp | 90 days |
-| Logout | Session ID, Timestamp | 90 days |
-| Permission Denied | Resource, Action, Address | 90 days |
-| Rate Limit Hit | Endpoint, IP, Timestamp | 30 days |
-
-## Vulnerability Disclosure
-
-We follow responsible disclosure:
-
-1. Report vulnerabilities to security@talak.dev
-2. Allow 90 days for remediation before public disclosure
-3. Credit researchers in security advisories
-4. Maintain CVE records for critical issues
-
-## Compliance
-
-- **GDPR**: Right to erasure, data portability
-- **CCPA**: Consumer privacy rights
-- **SOC 2**: Security controls (in progress)
-
-## Security Checklist
-
-- [ ] HTTPS everywhere
-- [ ] Secure session configuration
-- [ ] Rate limiting enabled
-- [ ] Input validation on all endpoints
-- [ ] Output encoding
-- [ ] CSRF protection
-- [ ] Security headers configured
-- [ ] Dependency scanning
-- [ ] Secrets management
-- [ ] Audit logging
-- [ ] Incident response plan
+For external validation, the following scope is defined for adversarial testing:
+- **Auth Bypass**: Attempt to forge JWTs or bypass SIWE verification.
+- **Race Conditions**: Exploit microtask queue interleaving during token rotation.
+- **Rate Limit Evasion**: Bypass adaptive limiting via IP rotation or wallet correlation attacks.
+- **Redis Abuse**: Attempt to gain access to unauthorized databases or clusters.
+- **KMS Latency**: Inject failures to observe fail-closed behavior.

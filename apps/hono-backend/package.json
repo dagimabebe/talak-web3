@@ -20,6 +20,7 @@
     "@talak-web3/types": "workspace:*",
     "hono": "^4.6.16",
     "pino": "^10.3.1",
+    "prom-client": "^15.1.3",
     "redis": "^5.11.0",
     "zod": "^4.3.6"
   },

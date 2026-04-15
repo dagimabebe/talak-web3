@@ -4,26 +4,228 @@ import { z } from 'zod';
 import crypto from 'node:crypto';
 import { TalakWeb3Error } from '@talak-web3/errors';
 import { talakWeb3 } from '@talak-web3/core';
-import type { TalakWeb3Context } from '@talak-web3/types';
+import type { TalakWeb3Instance } from '@talak-web3/types';
 import { createClient } from 'redis';
 import { strictCors } from './security/cors.js';
-import { RedisAuthStorage, MemoryAuthStorage } from './security/storage.js';
-import type { AuthStorage } from './security/storage.js';
+import { RedisAuthStorage } from './security/storage.js';
 import { TalakWeb3Auth } from '@talak-web3/auth';
 import { logger, requestLogger, getLogger } from './logger.js';
+import { createHardenedRedisClient, RedisSecurityAuditor, RedisDatabaseSelector } from './security/redis-hardening.js';
 import { secureHeaders } from 'hono/secure-headers';
 import { csrfProtection } from './security/csrf.js';
-import { metricsMiddleware, metrics } from './metrics.js';
 import { authMiddleware } from './security/authMiddleware.js';
 import { PriorityRequestQueue, RequestPriority } from './security/priority-queue.js';
 import { PolicyEngine } from './security/policy-engine.js';
 import { ImmutableAuditLogger } from './security/audit-logger.js';
+import { validateEnv } from './security/env.js';
+import { AdaptiveRateLimiter, DEFAULT_ADAPTIVE_CONFIG } from './security/adaptive-rate-limit.js';
+import { PrometheusMetrics, createMetricsMiddleware } from './security/prometheus-metrics.js';
+import { ElasticsearchSink, SplunkSink, HttpSiemSink } from './security/security-events.js';
+import { IncidentResponseManager } from './security/incident-response.js';
+import { createJwksEndpoint } from './security/jwks-endpoint.js';
+
+// ---------------------------------------------------------------------------
+// 1. BOOTSTRAP: Strict Environment Validation (Fail-Fast)
+// ---------------------------------------------------------------------------
+try {
+  validateEnv();
+} catch (err) {
+  console.error('[CRITICAL] Startup failed: Environment validation error');
+  console.error(err);
+  process.exit(1);
+}
 
 const app = new Hono();
 
 // ---------------------------------------------------------------------------
-// Context configuration tracking
+// 2. BOOTSTRAP: Mandatory Infrastructure (Hardened Redis)
 // ---------------------------------------------------------------------------
+const redisUrl = process.env['REDIS_URL']!;
+const redisConfig = createHardenedRedisClient(redisUrl, {
+  auth: {
+    enabled: process.env['REDIS_AUTH_ENABLED'] !== 'false',
+    password: process.env['REDIS_PASSWORD'],
+  },
+  tls: {
+    enabled: process.env['REDIS_TLS_ENABLED'] !== 'false',
+    certPath: process.env['REDIS_TLS_CERT_PATH'],
+    keyPath: process.env['REDIS_TLS_KEY_PATH'],
+    caPath: process.env['REDIS_TLS_CA_PATH'],
+  },
+  connectionLimits: {
+    maxConnections: parseInt(process.env['REDIS_MAX_CONNECTIONS'] ?? '100'),
+    maxRetriesPerRequest: parseInt(process.env['REDIS_MAX_RETRIES'] ?? '3'),
+    retryDelayOnFailover: parseInt(process.env['REDIS_RETRY_DELAY'] ?? '100'),
+    enableOfflineQueue: false,
+  },
+  databases: {
+    nonceDb: parseInt(process.env['REDIS_DB_NONCE'] ?? '0'),
+    sessionDb: parseInt(process.env['REDIS_DB_SESSION'] ?? '1'),
+    rateLimitDb: parseInt(process.env['REDIS_DB_RATELIMIT'] ?? '2'),
+    auditDb: parseInt(process.env['REDIS_DB_AUDIT'] ?? '3'),
+  },
+});
+
+const redis = createClient(redisConfig);
+
+// Separate clusters for isolation (blast radius containment)
+const redisAuthUrl = process.env['REDIS_AUTH_URL'] ?? redisUrl;
+const redisRateLimitUrl = process.env['REDIS_RATELIMIT_URL'] ?? redisUrl;
+const redisAuditUrl = process.env['REDIS_AUDIT_URL'] ?? redisUrl;
+
+const redisAuth = createClient(createHardenedRedisClient(redisAuthUrl, redisConfig));
+const redisRateLimit = createClient(createHardenedRedisClient(redisRateLimitUrl, redisConfig));
+const redisAudit = createClient(createHardenedRedisClient(redisAuditUrl, redisConfig));
+
+// Error handling for all clusters
+[redis, redisAuth, redisRateLimit, redisAudit].forEach((client, idx) => {
+  client.on('error', (err) => {
+    logger.error({ err, clientIdx: idx }, 'redis cluster error');
+    process.exit(1);
+  });
+});
+
+try {
+  await Promise.all([
+    redis.connect(),
+    redisAuth.connect(),
+    redisRateLimit.connect(),
+    redisAudit.connect(),
+  ]);
+  console.log('[BOOTSTRAP] All Redis clusters connected: OK');
+  
+  // Run Redis security audit on the primary cluster
+  const auditor = new RedisSecurityAuditor(redis);
+  const audit = await auditor.auditSecurity();
+  
+  if (audit.status === 'critical') {
+    console.error('[CRITICAL] Redis security issues detected:', audit.issues);
+    console.error('[CRITICAL] Recommendations:', audit.recommendations);
+    process.exit(1);
+  } else if (audit.status === 'warning') {
+    console.warn('[WARNING] Redis security warnings:', audit.issues);
+    console.warn('[WARNING] Recommendations:', audit.recommendations);
+  }
+  
+  // Apply security hardening in production to all clusters
+  if (process.env['NODE_ENV'] === 'production') {
+    await Promise.all([
+      auditor.applySecurityHardening(),
+      new RedisSecurityAuditor(redisAuth).applySecurityHardening(),
+      new RedisSecurityAuditor(redisRateLimit).applySecurityHardening(),
+      new RedisSecurityAuditor(redisAudit).applySecurityHardening(),
+    ]);
+  }
+  
+} catch (err) {
+  console.error('[CRITICAL] Could not connect to Redis clusters at startup. Exiting.');
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// 2.5 BOOTSTRAP: Security Infrastructure (Intelligence, Metrics, SIEM)
+// ---------------------------------------------------------------------------
+const metrics = new PrometheusMetrics();
+const incidentResponse = new IncidentResponseManager();
+const rateLimiter = new AdaptiveRateLimiter(redisRateLimit as any, DEFAULT_ADAPTIVE_CONFIG);
+
+// Security Event Pipeline: Helper to broadcast events to all sinks
+async function broadcastSecurityEvent(event: Omit<any, 'id' | 'timestamp' | 'metadata'> & { ip?: string, wallet?: string, sessionId?: string }) {
+  const fullEvent = {
+    id: crypto.randomUUID(),
+    timestamp: Date.now(),
+    ...event,
+    metadata: {
+      ip: event.ip,
+      wallet: event.wallet,
+      sessionId: event.sessionId,
+      environment: process.env['NODE_ENV'] ?? 'development',
+    }
+  };
+
+  // 1. Log locally
+  logger.info({ securityEvent: fullEvent }, 'Security event generated');
+
+  // 2. Update metrics
+  metrics.recordSecurityEvent(fullEvent.type, fullEvent.severity);
+
+  // 3. Forward to SIEM sinks (fire and forget)
+  Promise.allSettled(securityEventSinks.map(sink => sink.send(fullEvent))).catch(err => {
+    logger.error({ err }, 'Failed to forward security events to some sinks');
+  });
+
+  // 4. Trigger incident response if critical
+  if (fullEvent.severity === 'critical') {
+    await incidentResponse.createIncident({
+      type: 'security_misconfiguration', // Default, should be mapped better
+      severity: 'critical',
+      description: `Automated security event trigger: ${fullEvent.type}`,
+      affectedSystems: ['hono-backend'],
+      containmentActions: [],
+      recoveryActions: [],
+      postMortemRequired: true,
+      metadata: fullEvent.metadata
+    });
+  }
+}
+
+// Initialize SIEM pipeline
+const securityEventSinks = [];
+if (process.env['ELASTICSEARCH_URL']) {
+  securityEventSinks.push(new ElasticsearchSink({
+    url: process.env['ELASTICSEARCH_URL']!,
+    index: process.env['ELASTICSEARCH_INDEX'] ?? 'security-events',
+    apiKey: process.env['ELASTICSEARCH_API_KEY'],
+  }));
+}
+if (process.env['SPLUNK_URL']) {
+  securityEventSinks.push(new SplunkSink({
+    url: process.env['SPLUNK_URL']!,
+    token: process.env['SPLUNK_TOKEN']!,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// 3. BOOTSTRAP: Storage & Auth (Strict Constructor)
+// ---------------------------------------------------------------------------
+const storage = new RedisAuthStorage(redisAuth as any, true);
+
+// Configure Key Provider based on environment
+const keyProviderType = (process.env['KEY_PROVIDER_TYPE'] ?? 'environment') as any;
+const keyProviderOptions = {
+  keyId: process.env['AWS_KMS_KEY_ID'],
+  region: process.env['AWS_REGION'],
+  vaultUrl: process.env['VAULT_URL'],
+  secretPath: process.env['VAULT_SECRET_PATH'],
+  token: process.env['VAULT_TOKEN'],
+};
+
+const auth = new TalakWeb3Auth({
+  expectedDomain: process.env['SIWE_DOMAIN']!,
+  nonceStore: storage.nonceStore,
+  refreshStore: storage.refreshStore,
+  revocationStore: storage.revocationStore,
+  keyProviderType,
+  keyProviderOptions,
+  keyRotationConfig: {
+    maxKeys: parseInt(process.env['JWT_MAX_KEYS'] ?? '5'),
+    gracePeriodMs: parseInt(process.env['JWT_GRACE_PERIOD_MS'] ?? '604800000'), // 7 days
+    rotationIntervalMs: parseInt(process.env['JWT_ROTATION_INTERVAL_MS'] ?? '2592000000'), // 30 days
+  }
+});
+
+const configuredChains = (process.env['SUPPORTED_CHAINS'] ?? '1')
+  .split(',')
+  .map(id => parseInt(id.trim(), 10))
+  .filter(id => !isNaN(id));
+
+const talak = talakWeb3({
+  auth,
+  chains: configuredChains.map(id => ({
+    id,
+    rpcUrls: (process.env[`RPC_URL_${id}`] ?? '').split(',').map(s => s.trim()).filter(Boolean),
+  }))
+});
 
 const allowedOrigins = (process.env['ALLOWED_ORIGINS'] ?? '')
   .split(',')
@@ -35,77 +237,49 @@ if (allowedOrigins.length === 0) {
 }
 
 // ---------------------------------------------------------------------------
-// Storage & Core Init (Strict Fail-Closed Production Model)
-// ---------------------------------------------------------------------------
-
-let storage: AuthStorage;
-
-const redisUrl = process.env['REDIS_URL'];
-if (redisUrl) {
-  const redis = createClient({
-    url: redisUrl,
-    socket: {
-      reconnectStrategy: (retries) => {
-        if (retries > 10) return new Error('Redis connection failed after 10 retries');
-        return Math.min(retries * 100, 3000);
-      }
-    }
-  });
-  redis.on('error', (err) => logger.error({ err }, 'redis error'));
-  void redis.connect();
-  storage = new RedisAuthStorage(redis as any, true);
-} else {
-  storage = new MemoryAuthStorage();
-}
-
-const auth = new TalakWeb3Auth({
-  ...(process.env['SIWE_DOMAIN'] ? { expectedDomain: process.env['SIWE_DOMAIN'] } : {}),
-  ...(storage.nonceStore ? { nonceStore: storage.nonceStore } : {}),
-  ...(storage.refreshStore ? { refreshStore: storage.refreshStore } : {}),
-});
-
-// Configure supported chains from environment
-const configuredChains = (process.env['SUPPORTED_CHAINS'] ?? '1')
-  .split(',')
-  .map(id => parseInt(id.trim(), 10))
-  .filter(id => !isNaN(id));
-
-const rpcUrlsByChain: Record<number, string[]> = {};
-configuredChains.forEach(id => {
-  const urls = (process.env[`RPC_URL_${id}`] ?? '').split(',').map(s => s.trim()).filter(Boolean);
-  if (urls.length > 0) rpcUrlsByChain[id] = urls;
-});
-
-// Initialize talakWeb3 singleton once at startup
-const talak = talakWeb3({
-  auth,
-  chains: configuredChains.map(id => ({
-    id,
-    rpcUrls: rpcUrlsByChain[id] ?? ['https://eth-mainnet.g.alchemy.com/v2/your-api-key'],
-  }))
-});
-
-// ---------------------------------------------------------------------------
 // Middleware: Security, Logging, Parsing
 // ---------------------------------------------------------------------------
 
-// Global rate limiting per IP
+// Global rate limiting with Intelligence
 app.use('*', async (c, next) => {
   const ip = getIp(c);
-  const m = c.get('metrics');
   const log = getLogger(c);
+  const path = c.req.path;
   
-  try {
-    const rl = await storage.checkRateLimit(`rl:global:ip:${ip}`, 100, 100 / 60); // 100 requests per minute
-    if (!rl.allowed) {
-      log.warn({ ip }, 'global rate limit hit');
-      m.increment('rate_limit.hit', { endpoint: 'global', ip });
-      return c.json({ error: 'Too many requests' }, 429);
+  // Determine request type for rate limiting
+  let type: any = 'global';
+  if (path.includes('/auth')) type = 'auth';
+  if (path.includes('/rpc')) type = 'rpc';
+  if (path.includes('/nonce')) type = 'nonce';
+
+  const result = await rateLimiter.checkRateLimit({
+    type,
+    ip,
+    userAgent: c.req.header('User-Agent'),
+  });
+
+  if (!result.allowed) {
+    log.warn({ ip, path, penalties: result.penalties }, 'adaptive rate limit hit');
+    metrics.recordRateLimitHit(type, result.penalties?.[0] ?? 'unknown');
+    
+    // Broadcast security event on rate limit hit if risk score is high
+    if (result.riskScore && result.riskScore > 0.5) {
+      await broadcastSecurityEvent({
+        type: 'rate_limit_hit',
+        severity: result.riskScore > 0.8 ? 'high' : 'medium',
+        source: 'middleware/ratelimit',
+        details: { path, penalties: result.penalties, riskScore: result.riskScore },
+        ip
+      });
     }
-  } catch (err) {
-    log.error({ err }, 'global rate limit storage failure');
-    // If strict is true, storage.checkRateLimit will throw, failing closed.
+    
+    return c.json({ 
+      error: 'Too many requests', 
+      retryAfter: result.resetTime,
+      riskScore: result.riskScore
+    }, 429);
   }
+  
   await next();
 });
 
@@ -122,7 +296,7 @@ app.use('*', requestLogger());
 app.use('*', secureHeaders());
 
 // Metrics collection
-app.use('*', metricsMiddleware());
+app.use('*', createMetricsMiddleware(metrics));
 
 // Double-submit CSRF enforcement (sets cookie on every request, verifies header on POST/PUT/DELETE)
 app.use('*', csrfProtection());
@@ -153,7 +327,7 @@ app.use('*', policyEngine.createMiddleware());
 const auditLogger = new ImmutableAuditLogger({
   storage: {
     type: 'redis',
-    redis: redis
+    redis: redisAudit
   }
 });
 app.use('*', auditLogger.createMiddleware());
@@ -193,6 +367,9 @@ function getIp(c: Context): string {
 
 app.get('/health', (c) => c.json({ ok: true, now: Date.now() }));
 
+// JWKS Endpoint for key discovery
+app.get('/.well-known/jwks.json', createJwksEndpoint(auth));
+
 app.get('/security/status', (c) => {
   const anchoring = auditLogger.getAnchoringStatus();
   const mode = auditLogger.getMode();
@@ -210,9 +387,9 @@ app.get('/security/status', (c) => {
   });
 });
 
-app.get('/metrics', (c) => {
-  // Simple console export for this phase as per requirements
-  return c.text('Metrics are being collected in the backend logs. Prometheus sink pending.');
+app.get('/metrics', async (c) => {
+  const data = await metrics.getMetrics();
+  return c.text(data, 200, { 'Content-Type': 'text/plain; version=0.0.4' });
 });
 
 const NonceBody = z.object({ address: z.string().regex(/^0x[a-fA-F0-9]{40}$/) });
@@ -220,35 +397,34 @@ const NonceBody = z.object({ address: z.string().regex(/^0x[a-fA-F0-9]{40}$/) })
 app.post('/auth/nonce', async (c) => {
   const log = getLogger(c);
   const ip = getIp(c);
-  const m = c.get('metrics');
-
-  try {
-    const rl = await storage.checkRateLimit(`rl:nonce:ip:${ip}`, 10, 10 / 60);
-    if (!rl.allowed) {
-      log.warn({ ip }, 'rate limit hit on /auth/nonce');
-      m.increment('rate_limit.hit', { endpoint: '/auth/nonce', ip });
-      return c.json({ error: 'Rate limit exceeded' }, 429);
-    }
-  } catch (err) {
-    log.error({ err }, 'auth storage failure during /auth/nonce rate limit');
-    return c.json({ error: 'Service Unavailable' }, 503);
-  }
 
   const bodyResult = NonceBody.safeParse(await c.req.json().catch(() => ({})));
   if (!bodyResult.success) return c.json({ error: 'Invalid address' }, 400);
 
+  const address = bodyResult.data.address;
+
   try {
     const ua = c.req.header('user-agent') ?? undefined;
     
-    const opts: { ip?: string; ua?: string } = {};
-    if (ip) opts.ip = ip;
-    if (ua) opts.ua = ua;
+    const nonce = await auth.createNonce(address, { ip, ua });
+    log.info({ address, ip }, 'nonce created');
     
-    const nonce = await auth.createNonce(bodyResult.data.address, Object.keys(opts).length > 0 ? opts : undefined);
-    log.info({ address: bodyResult.data.address, ip }, 'nonce created');
+    // Track nonce creation metric
+    metrics.recordSecurityEvent('nonce_created', 'low');
+    
     return c.json({ nonce });
   } catch (err) {
-    log.error({ err }, 'failed to create nonce');
+    log.error({ err, address, ip }, 'failed to create nonce');
+    
+    // Broadcast security event on failure
+    await broadcastSecurityEvent({
+      type: 'system_error',
+      severity: 'medium',
+      source: 'auth/nonce',
+      details: { address, error: (err as any).message },
+      ip
+    });
+    
     return c.json({ error: 'Service Unavailable' }, 503);
   }
 });
@@ -260,14 +436,9 @@ const RpcBody = z.object({
   params: z.array(z.unknown()).optional(),
 });
 
-app.post('/rpc/:chainId', authMiddleware(auth, {
-  enableTieredValidation: true,
-  statelessMaxAge: 5 * 60 * 1000, // 5 minutes
-  alwaysCheckRevocation: process.env.NODE_ENV === 'production'
-}), async (c) => {
+app.post('/rpc/:chainId', authMiddleware(auth), async (c) => {
   const start = Date.now();
   const log = getLogger(c);
-  const m = c.get('metrics');
   const { chainId: chainIdStr } = c.req.param();
   const chainId = parseInt(chainIdStr, 10);
   
@@ -279,14 +450,21 @@ app.post('/rpc/:chainId', authMiddleware(auth, {
   // 2. Per-session rate limiting (quota enforcement)
   const authHeader = c.req.header('Authorization') ?? '';
   const token = authHeader.split(' ')[1] ?? 'anonymous';
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  
+  const ip = getIp(c);
+  const session = c.get('session');
+  const wallet = session?.address;
+
   try {
-    const rl = await storage.checkRateLimit(`rl:rpc:session:${tokenHash}`, 50, 50 / 60); // 50 RPC calls per minute per user
-    if (!rl.allowed) {
-      log.warn({ chainId, tokenHash }, 'RPC session rate limit hit');
-      m.increment('rate_limit.hit', { endpoint: '/rpc', chainId: String(chainId), session: tokenHash });
-      return c.json({ error: 'RPC quota exceeded' }, 429);
+    const result = await rateLimiter.checkRateLimit({
+      type: 'rpc',
+      ip,
+      wallet,
+    });
+
+    if (!result.allowed) {
+      log.warn({ chainId, wallet, ip }, 'RPC rate limit hit');
+      metrics.recordRateLimitHit('rpc', result.penalties?.[0] ?? 'quota_exceeded');
+      return c.json({ error: 'RPC quota exceeded', riskScore: result.riskScore }, 429);
     }
   } catch (err) {
     log.error({ err }, 'RPC rate limit storage failure');
@@ -305,11 +483,11 @@ app.post('/rpc/:chainId', authMiddleware(auth, {
       chainId,
     });
     
-    m.timing('rpc.duration', Date.now() - start, { method: bodyResult.data.method, chainId: String(chainId) });
+    metrics.recordRpcRequest(String(chainId), bodyResult.data.method, 'success', Date.now() - start);
     return c.json({ jsonrpc: '2.0', id: bodyResult.data.id ?? 1, result });
   } catch (err) {
     log.error({ err, method: bodyResult.data.method, chainId }, 'RPC request failed');
-    m.increment('rpc.error', { method: bodyResult.data.method, chainId: String(chainId) });
+    metrics.recordRpcError(String(chainId), bodyResult.data.method, (err as any).code || 'unknown');
     
     if (err instanceof TalakWeb3Error) {
       return c.json({ error: err.message, code: err.code }, err.status as any);
@@ -327,7 +505,6 @@ app.post('/auth/login', async (c) => {
   const start = Date.now();
   const log = getLogger(c);
   const ip = getIp(c);
-  const m = c.get('metrics');
 
   const bodyResult = LoginBody.safeParse(await c.req.json().catch(() => ({})));
   if (!bodyResult.success) {
@@ -340,38 +517,28 @@ app.post('/auth/login', async (c) => {
   const address = addrMatch?.[1]?.toLowerCase();
 
   try {
-    // 1. IP Rate limit
-    const ipRl = await storage.checkRateLimit(`rl:login:ip:${ip}`, 20, 20 / 60);
-    if (!ipRl.allowed) {
-      log.warn({ ip, address }, 'rate limit hit on /auth/login (IP)');
-      m.increment('rate_limit.hit', { endpoint: '/auth/login', ip });
-      return c.json({ error: 'Rate limit exceeded' }, 429);
-    }
-
-    // 2. Address Rate limit
-    if (address) {
-      const addrRl = await storage.checkRateLimit(`rl:login:addr:${address}`, 10, 10 / 120);
-      if (!addrRl.allowed) {
-        log.warn({ address, ip }, 'rate limit hit on /auth/login (address)');
-        m.increment('rate_limit.hit', { endpoint: '/auth/login', address });
-        return c.json({ error: 'Rate limit exceeded' }, 429);
-      }
-    }
+    const result = await auth.loginWithSiwe(body.message, body.signature);
+    
+    // Success: record metrics
+    metrics.recordAuthSuccess('siwe', Date.now() - start);
+    
+    return c.json(result);
   } catch (err) {
-    log.error({ err }, 'auth storage failure during /auth/login rate limit');
-    return c.json({ error: 'Service Unavailable' }, 503);
-  }
-
-  try {
-    const { accessToken, refreshToken } = await auth.loginWithSiwe(body.message, body.signature);
-    log.info({ address, ip }, 'login success');
-    m.increment('auth.login.success', { address: address ?? 'unknown' });
-    m.timing('auth.login.duration', Date.now() - start);
-    return c.json({ accessToken, refreshToken });
-  } catch (err) {
-    const code = err instanceof TalakWeb3Error ? err.code : 'AUTH_UNKNOWN';
-    log.warn({ address, ip, code, err }, 'login failed');
-    m.increment('auth.login.failure', { code, address: address ?? 'unknown' });
+    log.error({ err, address, ip }, 'login failed');
+    
+    // Apply penalty for failed auth
+    await rateLimiter.applyAuthFailurePenalty(ip, address);
+    
+    // Broadcast security event
+    await broadcastSecurityEvent({
+      type: 'auth_failure',
+      severity: 'medium',
+      source: 'auth/login',
+      details: { address, error: (err as any).message },
+      ip,
+      wallet: address
+    });
+    
     if (err instanceof TalakWeb3Error) {
       return c.json({ error: err.message, code: err.code }, err.status as any);
     }
@@ -384,24 +551,19 @@ const RefreshBody = z.object({ refreshToken: z.string().min(20) });
 app.post('/auth/refresh', async (c) => {
   const start = Date.now();
   const log = getLogger(c);
-  const m = c.get('metrics');
   const bodyResult = RefreshBody.safeParse(await c.req.json().catch(() => ({})));
   if (!bodyResult.success) return c.json({ error: 'Invalid request body' }, 400);
 
   try {
-    const { accessToken, refreshToken } = await auth.refresh(bodyResult.data.refreshToken);
-    const addrMatch = accessToken.split('.')[1];
-    const address = addrMatch ? (() => {
-      try { return JSON.parse(Buffer.from(addrMatch, 'base64url').toString()).address as string; }
-      catch { return 'unknown'; }
-    })() : 'unknown';
-    log.info({ address }, 'refresh token rotated');
-    m.increment('auth.refresh.success', { address });
-    m.timing('auth.refresh.duration', Date.now() - start);
-    return c.json({ accessToken, refreshToken });
+    const result = await auth.refresh(bodyResult.data.refreshToken);
+    
+    // Record metrics
+    metrics.recordAuthSuccess('refresh', Date.now() - start);
+    
+    return c.json(result);
   } catch (err) {
     log.warn({ err }, 'refresh failed');
-    m.increment('auth.refresh.failure');
+    metrics.recordAuthFailure('refresh', (err as any).code || 'unknown', Date.now() - start);
     return c.json({ error: 'Invalid or expired refresh token' }, 401);
   }
 });
@@ -411,12 +573,23 @@ app.post('/auth/logout', async (c) => {
   const bodyResult = RefreshBody.safeParse(await c.req.json().catch(() => ({})));
   if (!bodyResult.success) return c.json({ error: 'Invalid request body' }, 400);
 
-  const authHeader = c.req.header('authorization') ?? '';
+  const authHeader = c.req.header('Authorization') ?? c.req.header('authorization') ?? '';
   const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
 
   try {
     await auth.revokeSession(accessToken, bodyResult.data.refreshToken);
     log.info({}, 'logout: session revoked');
+    
+    // Broadcast logout event
+    const ip = getIp(c);
+    await broadcastSecurityEvent({
+      type: 'auth_success',
+      severity: 'low',
+      source: 'auth/logout',
+      details: { action: 'logout' },
+      ip
+    });
+    
     return c.json({ ok: true });
   } catch (err) {
     log.error({ err }, 'storage failure during logout');

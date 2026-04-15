@@ -6,30 +6,37 @@ export type TokenBucketConfig = {
   refillPerSecond: number;
 };
 
-const slidingWindowLua = `
+const adaptiveSlidingWindowLua = `
 -- KEYS[1] = limit key
 -- ARGV[1] = windowMs
 -- ARGV[2] = limit
+-- ARGV[3] = now
+-- ARGV[4] = cost
 -- returns: { allowed(0/1), remaining }
 
-local time = redis.call('TIME')
-local now = (tonumber(time[1]) * 1000) + math.floor(tonumber(time[2]) / 1000)
-local windowStart = now - tonumber(ARGV[1])
+local key = KEYS[1]
+local windowMs = tonumber(ARGV[1])
+local limit = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+local cost = tonumber(ARGV[4]) or 1
+local windowStart = now - windowMs
 
 -- Remove old entries
-redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', windowStart)
+redis.call('ZREMRANGEBYSCORE', key, '-inf', windowStart)
 
-local currentCount = redis.call('ZCARD', KEYS[1])
+local currentCount = redis.call('ZCARD', key)
 local allowed = 0
-local remaining = tonumber(ARGV[2]) - currentCount
+local remaining = limit - currentCount
 
-if currentCount < tonumber(ARGV[2]) then
+if (currentCount + cost) <= limit then
   allowed = 1
-  redis.call('ZADD', KEYS[1], now, now .. ":" .. math.random())
-  remaining = remaining - 1
+  for i=1,cost do
+    redis.call('ZADD', key, now, now .. ":" .. i .. ":" .. math.random())
+  end
+  remaining = limit - (currentCount + cost)
 end
 
-redis.call('PEXPIRE', KEYS[1], ARGV[1])
+redis.call('PEXPIRE', key, windowMs)
 
 return { allowed, remaining }
 `;
@@ -38,15 +45,14 @@ export async function rateLimitRedis(
   redis: RedisClientType,
   key: string,
   cfg: TokenBucketConfig,
-  _cost = 1, // cost ignored for simple sliding window
+  cost = 1,
 ): Promise<{ allowed: boolean; remaining: number }> {
-  // Configured with capacity as limit and 1/refillPerSecond as window
-  // e.g. 10 requests / 60 seconds
   const windowMs = (cfg.capacity / cfg.refillPerSecond) * 1000;
+  const now = Date.now();
   
-  const res = await redis.eval(slidingWindowLua, {
+  const res = await redis.eval(adaptiveSlidingWindowLua, {
     keys: [key],
-    arguments: [String(windowMs), String(cfg.capacity)],
+    arguments: [String(windowMs), String(cfg.capacity), String(now), String(cost)],
   }) as unknown;
 
   if (!Array.isArray(res) || res.length < 2) return { allowed: false, remaining: 0 };

@@ -1,13 +1,16 @@
-import { talakWeb3 } from 'talak-web3';
+import { createTalakWeb3 } from 'talak-web3';
 import { MainnetPreset } from 'talak-web3/presets';
 
-export const app = talakWeb3({
+export const app = createTalakWeb3({
   ...MainnetPreset,
   auth: {
     domain: process.env.SIWE_DOMAIN || 'localhost:3000',
-    secret: process.env.JWT_SECRET!,
+    // Stores are mandatory in production (e.g. RedisNonceStore)
+    nonceStore: undefined as any,
+    refreshStore: undefined as any,
+    revocationStore: undefined as any,
   },
 });
 
-// Initialize on startup
+// Initialize on startup (Mandatory)
 await app.init();

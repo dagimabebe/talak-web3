@@ -120,17 +120,16 @@ class TtlCache implements RpcCache {
 }
 
 // ---------------------------------------------------------------------------
-// Singleton factory
+// Context Factory
 // ---------------------------------------------------------------------------
 
-// Re-export TalakWeb3Instance from types for backward compatibility
 export type { TalakWeb3Instance } from '@talak-web3/types';
 
-let singleton: TalakWeb3Instance | undefined;
-
-export function talakWeb3(input: unknown = {}): TalakWeb3Instance {
-  if (singleton) return singleton;
-
+/**
+ * Creates a new TalakWeb3 instance (not a singleton).
+ * Refactored to eliminate shared mutable state across requests.
+ */
+export function createTalakWeb3(input: unknown = {}): TalakWeb3Instance {
   const normalizedInput = normalizeConfigInput(input);
   SecurityInvariant.checkSecrets(normalizedInput);
   const config = validateConfig(normalizedInput) as any as TalakWeb3BaseConfig;
@@ -139,6 +138,8 @@ export function talakWeb3(input: unknown = {}): TalakWeb3Instance {
   const plugins = new Map<string, TalakWeb3Plugin>();
   const requestChain = new MiddlewareChain();
   const responseChain = new MiddlewareChain();
+  
+  // Cache is now request-scoped or externally provided (e.g. Redis)
   const cache = new TtlCache();
   
   let auth: TalakWeb3Auth;
@@ -146,41 +147,19 @@ export function talakWeb3(input: unknown = {}): TalakWeb3Instance {
   if (config.auth instanceof TalakWeb3Auth) {
     auth = config.auth;
   } else {
-    // Create auth instance with optional configuration from config
     const authConfig = config.auth ?? {};
-    const authOptions: {
-      nonceStore?: NonceStore;
-      refreshStore?: RefreshStore;
-      revocationStore?: RevocationStore;
-      accessTtlSeconds?: number;
-      refreshTtlSeconds?: number;
-      expectedDomain?: string;
-    } = {};
+    const authOptions: any = {};
     
-    // Only add properties that actually exist (avoid undefined values)
-    if (authConfig.nonceStore) {
-      authOptions.nonceStore = authConfig.nonceStore as NonceStore;
-    }
-    if (authConfig.refreshStore) {
-      authOptions.refreshStore = authConfig.refreshStore as RefreshStore;
-    }
-    if (authConfig.revocationStore) {
-      authOptions.revocationStore = authConfig.revocationStore as RevocationStore;
-    }
-    if (authConfig.accessTtlSeconds !== undefined) {
-      authOptions.accessTtlSeconds = authConfig.accessTtlSeconds;
-    }
-    if (authConfig.refreshTtlSeconds !== undefined) {
-      authOptions.refreshTtlSeconds = authConfig.refreshTtlSeconds;
-    }
-    if (authConfig.domain) {
-      authOptions.expectedDomain = authConfig.domain;
-    }
+    if (authConfig.nonceStore) authOptions.nonceStore = authConfig.nonceStore;
+    if (authConfig.refreshStore) authOptions.refreshStore = authConfig.refreshStore;
+    if (authConfig.revocationStore) authOptions.revocationStore = authConfig.revocationStore;
+    if (authConfig.accessTtlSeconds !== undefined) authOptions.accessTtlSeconds = authConfig.accessTtlSeconds;
+    if (authConfig.refreshTtlSeconds !== undefined) authOptions.refreshTtlSeconds = authConfig.refreshTtlSeconds;
+    if (authConfig.domain) authOptions.expectedDomain = authConfig.domain;
     
     auth = new TalakWeb3Auth(authOptions);
   }
 
-  // Build RPC endpoint list from all configured chains
   const endpoints = config.chains.flatMap((c, priority) =>
     c.rpcUrls.map(url => ({ url, priority })),
   );
@@ -211,10 +190,7 @@ export function talakWeb3(input: unknown = {}): TalakWeb3Instance {
     rpc,
   };
 
-  // Patch UnifiedRpc's internal context reference to the complete one
   rpc.ctx = context;
-
-  // Register core security middleware
   requestChain.use(securityMiddleware);
 
   const instance: TalakWeb3Instance = {
@@ -248,24 +224,22 @@ export function talakWeb3(input: unknown = {}): TalakWeb3Instance {
     async destroy() {
       for (const plugin of plugins.values()) {
         if (plugin.teardown) {
-          await plugin.teardown();
+          await plugin.teardown(context);
         }
       }
       plugins.clear();
       hooks.clear();
-      cache.clear();
-      singleton = undefined;
-      logger.info('talak-web3 instance destroyed');
     },
   };
 
-  singleton = instance;
   return instance;
 }
 
-/** @internal — resets singleton; for tests only */
-export function __resetTalakWeb3(): void {
-  singleton = undefined;
+/**
+ * @deprecated Use createTalakWeb3() instead. This function now returns a new instance every time.
+ */
+export function talakWeb3(input: unknown = {}): TalakWeb3Instance {
+  return createTalakWeb3(input);
 }
 
 function isTalakWeb3Plugin(input: unknown): input is TalakWeb3Plugin {
