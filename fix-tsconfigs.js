@@ -29,20 +29,17 @@ packages.forEach(pkgPath => {
   }
 
   const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf8'));
-  
-  // Fix composite mode
+
   tsconfig.compilerOptions.composite = false;
   delete tsconfig.compilerOptions.tsBuildInfoFile;
   delete tsconfig.references;
-  
-  // Add baseUrl if missing
+
   if (!tsconfig.compilerOptions.baseUrl) {
     tsconfig.compilerOptions.baseUrl = '.';
   }
-  
-  // Clean up paths
+
   delete tsconfig.compilerOptions.paths;
-  
+
   fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + '\n');
   console.log(`✓ Fixed ${pkgPath}`);
 });

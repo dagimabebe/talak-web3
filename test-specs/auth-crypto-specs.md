@@ -357,7 +357,7 @@ beforeAll(async () => {
   const { publicKey, privateKey } = await generateKeyPair('RS256');
   const privateKeyPem = exportPKCS8(privateKey);
   const publicKeyPem = exportSPKI(publicKey);
-  
+
   vi.stubEnv('JWT_PRIVATE_KEY', privateKeyPem);
   vi.stubEnv('JWT_PUBLIC_KEY', publicKeyPem);
 });

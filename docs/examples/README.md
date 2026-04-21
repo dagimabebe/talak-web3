@@ -44,7 +44,7 @@ apps/
 - **Logic**: See [APP_LOGIC.md](./example-next-dapp/APP_LOGIC.md)
 - **Run**: `pnpm dev` in the app directory
 
-### minimal-auth-app  
+### minimal-auth-app
 - **Status**: Stub
 - **Framework**: Vanilla HTML + TypeScript
 - **Key Features**: SIWE (Sign-In with Ethereum) authentication flow
@@ -81,7 +81,7 @@ import { useAccount } from '@talak-web3/hooks';
 
 function WalletButton() {
   const account = useAccount();
-  
+
   return account.isConnected ? (
     <button onClick={account.disconnect}>Disconnect</button>
   ) : (
@@ -97,9 +97,9 @@ import { useRpc } from '@talak-web3/hooks';
 
 function RpcTester() {
   const rpc = useRpc();
-  
+
   const blockNumber = await rpc.request('eth_blockNumber', []);
-  // or
+
   const balance = await rpc.request('eth_getBalance', [address, 'latest']);
 }
 ```
@@ -111,13 +111,10 @@ import { TalakWeb3Client } from '@talak-web3/client';
 
 const client = new TalakWeb3Client({ baseUrl: 'http://localhost:8787' });
 
-// 1. Get nonce
 const { nonce } = await client.getNonce(address);
 
-// 2. Create SIWE message
 const message = `${host} wants you to sign in with your Ethereum account...`;
 
-// 3. Sign and login
 await client.login(message, signature);
 ```
 

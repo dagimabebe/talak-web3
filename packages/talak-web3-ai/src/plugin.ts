@@ -1,8 +1,7 @@
 import type { TalakWeb3Context, AiAgent, AgentRunInput, AgentRunOutput, ToolDefinition } from '@talak-web3/types';
-// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-explicit-any
+
 const OpenAI: any = require('openai');
 
-/** AI-specific error class */
 class AiError extends Error {
   code: string;
   status: number;
@@ -15,7 +14,7 @@ class AiError extends Error {
 }
 
 export class TalakWeb3AiPlugin implements AiAgent {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   private readonly client: any;
   private readonly model: string;
   private readonly mockMode: boolean;
@@ -36,7 +35,7 @@ export class TalakWeb3AiPlugin implements AiAgent {
   }
 
   async run(input: AgentRunInput): Promise<AgentRunOutput> {
-    // cast to any to avoid tight coupling to TalakWeb3EventsMap typing
+
     this.ctx.hooks.emit('ai:run-start' as any, { input } as any);
 
     const normalizedTools = normalizeTools(input.tools ?? []);
@@ -78,7 +77,6 @@ export class TalakWeb3AiPlugin implements AiAgent {
         input: safeJsonParse(tc.function?.arguments ?? tc.arguments ?? '{}'),
       }));
 
-      // Dispatch tools (one round) then ask the model to finalize.
       if (toolCalls.length > 0) {
         const toolMessages: any[] = [];
 

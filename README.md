@@ -1,6 +1,5 @@
 # talak-web3
-  
-  
+
 [![CI](https://github.com/dagimabebe/talak-web3/actions/workflows/ci.yml/badge.svg)](https://github.com/dagimabebe/talak-web3/actions)
 [![npm version](https://img.shields.io/npm/v/talak-web3?logo=npm&label=npm%20package)](https://www.npmjs.com/package/talak-web3)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -59,7 +58,7 @@ Consult [`docs/MINIMAL_SETUP.md`](./docs/MINIMAL_SETUP.md) and the [`@talak-web3
 
 ### Instance lifecycle
 
-`talakWeb3()` returns a **new instance** on each call (no global singleton state).  
+`talakWeb3()` returns a **new instance** on each call (no global singleton state).
 `__resetTalakWeb3()` is retained for backwards compatibility and is a **no-op**.
 
 ## Package ecosystem
@@ -102,7 +101,6 @@ pnpm lint
 # Type check
 pnpm typecheck
 ```
-
 
 ## Documentation
 

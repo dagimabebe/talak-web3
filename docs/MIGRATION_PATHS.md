@@ -66,26 +66,24 @@ const client = new Etcd3({
   hosts: ['etcd-1:2379', 'etcd-2:2379', 'etcd-3:2379']
 });
 
-// Linearizable nonce consumption
 async function consumeNonce(address: string, nonce: string): Promise<boolean> {
   const key = `nonces/${address}/${nonce}`;
-  
+
   try {
-    // Compare-and-swap for atomicity
+
     const result = await client
-      .lease(300) // 5 minute TTL
+      .lease(300)
       .put(key)
       .ifNotExists()
       .value('consumed');
-    
+
     return result.succeeded;
   } catch (err) {
-    // etcd quorum failure → fail closed
+
     throw new Error('Nonce store unavailable');
   }
 }
 
-// Linearizable revocation check
 async function isRevoked(jti: string): Promise<boolean> {
   const value = await client.get(`revocations/${jti}`).string();
   return value !== null;
@@ -139,14 +137,14 @@ Monotonic floor prevents rollback but doesn't establish **global total ordering*
 
 ```typescript
 interface HLCTimestamp {
-  logical: number;    // Logical counter
-  physical: number;   // Physical time (NTP-synced)
-  nodeId: string;     // Unique node identifier
+  logical: number;
+  physical: number;
+  nodeId: string;
 }
 
 class HybridLogicalClock {
   private timestamp: HLCTimestamp;
-  
+
   constructor(nodeId: string) {
     this.timestamp = {
       logical: 0,
@@ -154,21 +152,19 @@ class HybridLogicalClock {
       nodeId
     };
   }
-  
-  // Generate new timestamp
+
   now(): HLCTimestamp {
     const now = Date.now();
-    
+
     this.timestamp = {
       logical: Math.max(this.timestamp.logical + 1, now - this.timestamp.physical),
       physical: now,
       nodeId: this.timestamp.nodeId
     };
-    
+
     return { ...this.timestamp };
   }
-  
-  // Receive timestamp from another node
+
   receive(other: HLCTimestamp): void {
     this.timestamp = {
       logical: Math.max(this.timestamp.logical, other.logical) + 1,
@@ -176,10 +172,9 @@ class HybridLogicalClock {
       nodeId: this.timestamp.nodeId
     };
   }
-  
-  // Compare timestamps (happens-before)
+
   happensBefore(a: HLCTimestamp, b: HLCTimestamp): boolean {
-    return a.physical < b.physical || 
+    return a.physical < b.physical ||
            (a.physical === b.physical && a.logical < b.logical);
   }
 }
@@ -188,34 +183,30 @@ class HybridLogicalClock {
 ### Implementation
 
 ```typescript
-// Token issuance with HLC
 const hlc = new HybridLogicalClock(nodeId);
 
 async function issueToken(address: string): Promise<string> {
   const timestamp = hlc.now();
-  
+
   const token = {
     iat: timestamp.physical,
-    hlc: timestamp, // Include HLC in token
-    // ... other claims
+    hlc: timestamp,
+
   };
-  
+
   return jwt.sign(token, privateKey);
 }
 
-// Token validation with causal ordering
 async function validateToken(token: JWT): Promise<boolean> {
   const receivedHLC = token.hlc;
   const currentHLC = hlc.now();
-  
-  // Reject if token from future (clock skew)
+
   if (receivedHLC.physical > currentHLC.physical + 60000) {
     return false;
   }
-  
-  // Update local clock
+
   hlc.receive(receivedHLC);
-  
+
   return true;
 }
 ```
@@ -281,11 +272,9 @@ Post-load integrity checks cannot prevent **pre-execution compromise**:
 #### 1. Container Signing (Cosign)
 
 ```bash
-# Build and sign
 docker build -t auth-service:1.0.0 .
 cosign sign --key cosign.key auth-service:1.0.0
 
-# Push to registry
 docker push auth-service:1.0.0
 cosign upload blob --blob sbom.json auth-service:1.0.0
 ```
@@ -293,7 +282,6 @@ cosign upload blob --blob sbom.json auth-service:1.0.0
 #### 2. Admission Controller (Kubernetes)
 
 ```yaml
-# policies/auth-signature-policy.yaml
 apiVersion: policy.sigstore.dev/v1beta1
 kind: ClusterImagePolicy
 metadata:
@@ -314,26 +302,24 @@ spec:
 ```typescript
 import { verifySignature } from '@sigstore/verify';
 
-// Before startup
 async function verifyContainer(): Promise<void> {
   const imageDigest = process.env['CONTAINER_DIGEST'];
   const signature = await fetchSignature(imageDigest);
-  
+
   const valid = await verifySignature({
     signature,
     publicKey: COSIGN_PUBLIC_KEY,
     image: imageDigest
   });
-  
+
   if (!valid) {
     console.error('Container signature verification failed');
     process.exit(1);
   }
-  
+
   console.log('Container signature verified');
 }
 
-// Run before anything else
 verifyContainer().then(startApplication);
 ```
 
@@ -379,7 +365,7 @@ verifyContainer().then(startApplication);
 
 **Required**: etcd with cross-region consensus OR regional isolation
 
-**Recommendation**: 
+**Recommendation**:
 - If <3 regions: etcd global cluster
 - If >3 regions: Regional etcd + cross-region async replication
 
@@ -398,7 +384,7 @@ verifyContainer().then(startApplication);
 
 **Required**: Linearizable storage + verified boot + audit logging
 
-**Recommendation**: 
+**Recommendation**:
 1. Migrate to etcd (linearizability)
 2. Implement container signing (supply chain)
 3. Add comprehensive audit logging
@@ -418,7 +404,7 @@ verifyContainer().then(startApplication);
 
 **Required**: Consensus-backed storage with quorum reads
 
-**Recommendation**: 
+**Recommendation**:
 - Migrate to etcd/Consul
 - Deploy globally distributed cluster
 - Use quorum reads for linearizability
@@ -439,7 +425,7 @@ verifyContainer().then(startApplication);
 
 **Required**: Verified boot + signed containers + reproducible builds
 
-**Recommendation**: 
+**Recommendation**:
 1. Implement container signing (Cosign)
 2. Add admission controller
 3. Deploy in confidential VM (optional)
@@ -460,7 +446,7 @@ verifyContainer().then(startApplication);
 
 **Required**: HSM + TEE + BFT consensus + zero-trust
 
-**Recommendation**: 
+**Recommendation**:
 1. Move to HSM-backed key management
 2. Run in confidential computing (AWS Nitro/GCP SEV)
 3. Migrate to BFT consensus (Tendermint/HotStuff)
@@ -482,7 +468,7 @@ verifyContainer().then(startApplication);
 
 **Required**: Likely linearizability + formal verification + audit
 
-**Recommendation**: 
+**Recommendation**:
 1. Consult with compliance team
 2. Map requirements to technical controls
 3. Implement etcd + verified boot minimum
