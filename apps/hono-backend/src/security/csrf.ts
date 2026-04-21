@@ -3,28 +3,25 @@ import { getCookie, setCookie } from 'hono/cookie';
 import { TalakWeb3Error } from '@talak-web3/errors';
 import { randomBytes } from 'node:crypto';
 
-/**
- * Double-submit CSRF protection middleware.
- * 
- * 1. Ensures a 'csrf_token' cookie exists. If not, sets one.
- * 2. For mutating methods (POST, PUT, DELETE), verifies 'x-csrf-token' header matches cookie.
- */
 export function csrfProtection(): MiddlewareHandler {
   return async (c, next) => {
     let token = getCookie(c, 'csrf_token');
-    
-    // Ensure cookie exists
+
     if (!token) {
       token = randomBytes(16).toString('hex');
-      setCookie(c, 'csrf_token', token, {
+      const cookieDomain = process.env['COOKIE_DOMAIN'];
+      const cookieOptions: any = {
         path: '/',
         secure: true,
-        httpOnly: true, // Should be httpOnly for better security; client reads from response header or it's handled via double-submit if needed, but per requirements we set httpOnly: true
-        sameSite: 'None', // Required for cross-subdomain/cross-site
-        domain: '.talak.io', // Enable cross-subdomain access
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-      });
-      // Set a header so the client can read the initial token once if needed (e.g. on first visit)
+        httpOnly: true,
+        sameSite: 'Strict',
+        maxAge: 60 * 60 * 24 * 7,
+      };
+      if (cookieDomain) {
+        cookieOptions.domain = cookieDomain;
+      }
+      setCookie(c, 'csrf_token', token, cookieOptions);
+
       c.header('X-CSRF-Token-Initial', token);
     }
 
@@ -35,17 +32,37 @@ export function csrfProtection(): MiddlewareHandler {
 
     if (isMutating && !isSafePath) {
       const headerToken = c.req.header('x-csrf-token');
-      
-      // Strict double-submit validation
+
       if (!headerToken || headerToken !== token) {
         throw new TalakWeb3Error('CSRF token mismatch or missing. Double-submit validation failed.', {
           code: 'CSRF_INVALID',
           status: 403,
         });
       }
-      
-      // Additional security: rotating token on every mutating request (optional but recommended)
-      // For simplicity, we'll keep the current one but ensure it's validated correctly.
+
+      const origin = c.req.header('origin');
+      const referer = c.req.header('referer');
+      const allowedOrigins = process.env['ALLOWED_ORIGINS']?.split(',').map(o => o.trim()) ?? [];
+
+      if (origin && allowedOrigins.length > 0) {
+        const originAllowed = allowedOrigins.some(allowed => {
+          try {
+            const allowedUrl = new URL(allowed);
+            const originUrl = new URL(origin);
+            return allowedUrl.hostname === originUrl.hostname &&
+                   allowedUrl.protocol === originUrl.protocol;
+          } catch {
+            return false;
+          }
+        });
+
+        if (!originAllowed) {
+          throw new TalakWeb3Error('Origin validation failed - cross-site request blocked', {
+            code: 'CSRF_ORIGIN_MISMATCH',
+            status: 403,
+          });
+        }
+      }
     }
 
     await next();

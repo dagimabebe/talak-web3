@@ -2,49 +2,41 @@ import { SignJWT, jwtVerify, type JWTVerifyOptions, importPKCS8, importSPKI, typ
 import { TalakWeb3Error } from '@talak-web3/errors';
 import { JwksManager, type JwksResponse, type KeyRotationConfig } from './jwks.js';
 
-// ---------------------------------------------------------------------------
-// Centralized Key Management with KMS/HSM Support
-// ---------------------------------------------------------------------------
-
 export interface KeyProvider {
-  /** Get current signing key ID and public key */
-  getCurrentSigningKeyInfo(): Promise<{ kid: string; publicKey: KeyLike }>;
-  
-  /** Sign data using the current private key (remote operation) */
-  sign(data: Uint8Array): Promise<Uint8Array>;
-  
-  /** Get all verification keys */
-  getVerificationKeys(): Promise<{ kid: string; publicKey: KeyLike }[]>;
-  
-  /** Rotate to a new key */
-  rotateKey(): Promise<{ kid: string; publicKey: KeyLike }>;
-  
-  /** Revoke a key */
-  revokeKey(kid: string): Promise<void>;
-}
 
-// ---------------------------------------------------------------------------
-// Environment-based Key Provider (Current Implementation)
-// ---------------------------------------------------------------------------
+  getCurrentSigningKeyInfo(): Promise<{ kid: string; publicKey: KeyLike }>;
+
+  sign(data: Uint8Array): Promise<Uint8Array>;
+
+  getVerificationKeys(): Promise<{ kid: string; publicKey: KeyLike }[]>;
+
+  rotateKey(): Promise<{ kid: string; publicKey: KeyLike }>;
+
+  revokeKey(kid: string): Promise<void>;
+
+  publishKeyRevocation?(kid: string): Promise<void>;
+}
 
 export class EnvironmentKeyProvider implements KeyProvider {
   private jwksManager: JwksManager;
   private initialized = false;
+  private redisClient: any | null = null;
 
-  constructor(private config?: Partial<KeyRotationConfig>) {
+  constructor(private config?: Partial<KeyRotationConfig>, redisClient?: any) {
     this.jwksManager = new JwksManager(config);
+    this.redisClient = redisClient;
   }
 
   async getCurrentSigningKeyInfo(): Promise<{ kid: string; publicKey: KeyLike }> {
     await this.ensureInitialized();
     const key = this.jwksManager.getPrimaryKey();
     if (!key) {
-      throw new TalakWeb3Error('No signing key available', { 
-        code: 'AUTH_NO_SIGNING_KEY', 
-        status: 500 
+      throw new TalakWeb3Error('No signing key available', {
+        code: 'AUTH_NO_SIGNING_KEY',
+        status: 500
       });
     }
-    // We only need kid and publicKey for "info"
+
     const pub = this.jwksManager.getPublicKey(key.kid);
     if (!pub) throw new Error('Public key missing for primary kid');
     return { kid: key.kid, publicKey: pub };
@@ -60,7 +52,6 @@ export class EnvironmentKeyProvider implements KeyProvider {
       });
     }
 
-    // Local signing with the private key (current behavior for Environment provider)
     const signer = new FlattenedSign(data);
     signer.setProtectedHeader({ alg: 'RS256' });
     const jws = await signer.sign(key.privateKey);
@@ -70,8 +61,7 @@ export class EnvironmentKeyProvider implements KeyProvider {
   async getVerificationKeys(): Promise<{ kid: string; publicKey: KeyLike }[]> {
     await this.ensureInitialized();
     const keys: { kid: string; publicKey: KeyLike }[] = [];
-    
-    // Get all keys from JWKS manager
+
     const jwks = await this.jwksManager.getJwks();
     for (const jwk of jwks.keys) {
       const publicKey = this.jwksManager.getPublicKey(jwk.kid);
@@ -79,12 +69,11 @@ export class EnvironmentKeyProvider implements KeyProvider {
         keys.push({ kid: jwk.kid, publicKey });
       }
     }
-    
+
     return keys;
   }
 
   async rotateKey(): Promise<{ kid: string; publicKey: KeyLike }> {
-    // For environment provider, we can't dynamically generate new keys
     throw new TalakWeb3Error('Key rotation not supported with environment provider', {
       code: 'AUTH_ROTATION_NOT_SUPPORTED',
       status: 501,
@@ -92,11 +81,25 @@ export class EnvironmentKeyProvider implements KeyProvider {
   }
 
   async revokeKey(kid: string): Promise<void> {
-    // For environment provider, we can't revoke keys
-    throw new TalakWeb3Error('Key revocation not supported with environment provider', {
-      code: 'AUTH_REVOCATION_NOT_SUPPORTED',
-      status: 501,
-    });
+
+    this.jwksManager.revokeKey(kid);
+
+    await this.publishKeyRevocation(kid);
+  }
+
+  async publishKeyRevocation(kid: string): Promise<void> {
+    if (!this.redisClient) return;
+
+    try {
+      const message = JSON.stringify({
+        type: 'key_revoked',
+        kid,
+        timestamp: Date.now(),
+      });
+      await this.redisClient.publish('talak:keys:broadcast', message);
+    } catch (err) {
+      console.warn('[AUTH] Failed to publish key revocation:', err);
+    }
   }
 
   async emergencyPurge(newPrivateKey?: KeyLike, newPublicKey?: KeyLike): Promise<string> {
@@ -106,7 +109,6 @@ export class EnvironmentKeyProvider implements KeyProvider {
   private async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
 
-    // Load primary key (mandatory)
     const primaryPrivPem = process.env['JWT_PRIVATE_KEY'];
     const primaryPubPem = process.env['JWT_PUBLIC_KEY'];
     const primaryKidEnv = process.env['JWT_PRIMARY_KID'] || 'v1';
@@ -121,16 +123,15 @@ export class EnvironmentKeyProvider implements KeyProvider {
     try {
       const priv = await importPKCS8(primaryPrivPem, 'RS256');
       const pub = await importSPKI(primaryPubPem, 'RS256');
-      this.jwksManager.addKey(primaryKidEnv, pub, priv, true);
+      await this.jwksManager.addKey(primaryKidEnv, pub, priv, true);
     } catch (err) {
-      throw new TalakWeb3Error('Failed to import primary JWT keys', { 
-        code: 'AUTH_JWT_KEYS_INVALID', 
-        status: 500, 
-        cause: err 
+      throw new TalakWeb3Error('Failed to import primary JWT keys', {
+        code: 'AUTH_JWT_KEYS_INVALID',
+        status: 500,
+        cause: err
       });
     }
 
-    // Load secondary/legacy public keys for rotation grace periods
     const secondaryKeyEnvs = Object.keys(process.env).filter(k => k.startsWith('JWT_PUBLIC_KEY_'));
     for (const envKey of secondaryKeyEnvs) {
       const kid = envKey.replace('JWT_PUBLIC_KEY_', '');
@@ -138,7 +139,7 @@ export class EnvironmentKeyProvider implements KeyProvider {
       if (pubPem && kid !== primaryKidEnv) {
         try {
           const pub = await importSPKI(pubPem, 'RS256');
-          this.jwksManager.addKey(kid, pub);
+          await this.jwksManager.addKey(kid, pub);
         } catch (err) {
           console.warn(`[talak-web3-auth] Skipping invalid secondary key ${kid}:`, err);
         }
@@ -154,10 +155,6 @@ export class EnvironmentKeyProvider implements KeyProvider {
   }
 }
 
-// ---------------------------------------------------------------------------
-// AWS KMS Key Provider (Production Grade)
-// ---------------------------------------------------------------------------
-
 export class AWSKmsKeyProvider implements KeyProvider {
   private jwksManager: JwksManager;
   private keyId: string;
@@ -170,10 +167,6 @@ export class AWSKmsKeyProvider implements KeyProvider {
   }
 
   async getCurrentSigningKeyInfo(): Promise<{ kid: string; publicKey: KeyLike }> {
-    // In a real implementation, this would:
-    // 1. Call AWS KMS to get public key
-    // 2. Cache the public key locally
-    
     throw new TalakWeb3Error('AWS KMS provider not yet implemented', {
       code: 'AUTH_KMS_NOT_IMPLEMENTED',
       status: 501,
@@ -181,9 +174,6 @@ export class AWSKmsKeyProvider implements KeyProvider {
   }
 
   async sign(data: Uint8Array): Promise<Uint8Array> {
-    // In a real implementation, this would:
-    // 1. Use KMS Sign API for signing (no direct private key access)
-    
     throw new TalakWeb3Error('AWS KMS provider not yet implemented', {
       code: 'AUTH_KMS_NOT_IMPLEMENTED',
       status: 501,
@@ -191,7 +181,6 @@ export class AWSKmsKeyProvider implements KeyProvider {
   }
 
   async getVerificationKeys(): Promise<{ kid: string; publicKey: KeyLike }[]> {
-    // Implementation would fetch all key versions from KMS
     throw new TalakWeb3Error('AWS KMS provider not yet implemented', {
       code: 'AUTH_KMS_NOT_IMPLEMENTED',
       status: 501,
@@ -199,7 +188,6 @@ export class AWSKmsKeyProvider implements KeyProvider {
   }
 
   async rotateKey(): Promise<{ kid: string; publicKey: KeyLike }> {
-    // Implementation would create new key version in KMS
     throw new TalakWeb3Error('AWS KMS provider not yet implemented', {
       code: 'AUTH_KMS_NOT_IMPLEMENTED',
       status: 501,
@@ -207,17 +195,12 @@ export class AWSKmsKeyProvider implements KeyProvider {
   }
 
   async revokeKey(kid: string): Promise<void> {
-    // Implementation would schedule key for deletion in KMS
     throw new TalakWeb3Error('AWS KMS provider not yet implemented', {
       code: 'AUTH_KMS_NOT_IMPLEMENTED',
       status: 501,
     });
   }
 }
-
-// ---------------------------------------------------------------------------
-// HashiCorp Vault Key Provider (Production Grade)
-// ---------------------------------------------------------------------------
 
 export class VaultKeyProvider implements KeyProvider {
   private jwksManager: JwksManager;
@@ -233,10 +216,6 @@ export class VaultKeyProvider implements KeyProvider {
   }
 
   async getCurrentSigningKeyInfo(): Promise<{ kid: string; publicKey: KeyLike }> {
-    // In a real implementation, this would:
-    // 1. Fetch current public key from Vault
-    // 2. Cache public key locally
-    
     throw new TalakWeb3Error('Vault provider not yet implemented', {
       code: 'AUTH_VAULT_NOT_IMPLEMENTED',
       status: 501,
@@ -244,9 +223,6 @@ export class VaultKeyProvider implements KeyProvider {
   }
 
   async sign(data: Uint8Array): Promise<Uint8Array> {
-    // In a real implementation, this would:
-    // 1. Use Vault's transit engine for signing
-    
     throw new TalakWeb3Error('Vault provider not yet implemented', {
       code: 'AUTH_VAULT_NOT_IMPLEMENTED',
       status: 501,
@@ -254,7 +230,6 @@ export class VaultKeyProvider implements KeyProvider {
   }
 
   async getVerificationKeys(): Promise<{ kid: string; publicKey: KeyLike }[]> {
-    // Implementation would fetch all key versions from Vault
     throw new TalakWeb3Error('Vault provider not yet implemented', {
       code: 'AUTH_VAULT_NOT_IMPLEMENTED',
       status: 501,
@@ -262,7 +237,6 @@ export class VaultKeyProvider implements KeyProvider {
   }
 
   async rotateKey(): Promise<{ kid: string; publicKey: KeyLike }> {
-    // Implementation would rotate key in Vault
     throw new TalakWeb3Error('Vault provider not yet implemented', {
       code: 'AUTH_VAULT_NOT_IMPLEMENTED',
       status: 501,
@@ -270,17 +244,12 @@ export class VaultKeyProvider implements KeyProvider {
   }
 
   async revokeKey(kid: string): Promise<void> {
-    // Implementation would revoke key in Vault
     throw new TalakWeb3Error('Vault provider not yet implemented', {
       code: 'AUTH_VAULT_NOT_IMPLEMENTED',
       status: 501,
     });
   }
 }
-
-// ---------------------------------------------------------------------------
-// Key Management Factory
-// ---------------------------------------------------------------------------
 
 export type KeyProviderType = 'environment' | 'aws-kms' | 'vault';
 
@@ -304,10 +273,6 @@ export function createKeyProvider(
   }
 }
 
-// ---------------------------------------------------------------------------
-// JWT Signing and Verification with Key Rotation Support
-// ---------------------------------------------------------------------------
-
 export class JwtManager {
   private keyProvider: KeyProvider;
   private verificationCache: Map<string, KeyLike> = new Map();
@@ -326,10 +291,7 @@ export class JwtManager {
     jti?: string;
   } = {}): Promise<string> {
     const { kid } = await this.keyProvider.getCurrentSigningKeyInfo();
-    
-    // `jose`'s `SignJWT.sign()` requires a local key. Since `KeyProvider.sign()` is a
-    // remote signing primitive (KMS/HSM), we build the JWT JWS compact form manually:
-    // BASE64URL(header) + "." + BASE64URL(payload) is the "tbs" bytes to sign.
+
     const nowSec = Math.floor(Date.now() / 1000);
     const jwtPayload: Record<string, unknown> = { ...(payload ?? {}) };
     jwtPayload.iat = nowSec;
@@ -389,7 +351,6 @@ export class JwtManager {
       });
     }
 
-    // Get public key (with caching)
     let publicKey = this.verificationCache.get(kid);
     if (!publicKey) {
       const verificationKeys = await this.keyProvider.getVerificationKeys();
@@ -402,15 +363,14 @@ export class JwtManager {
       }
       publicKey = key.publicKey;
       this.verificationCache.set(kid, publicKey);
-      
-      // Cache cleanup
+
       setTimeout(() => this.verificationCache.delete(kid), this.cacheTimeoutMs);
     }
 
     const verifyOptions: JWTVerifyOptions = {
       algorithms: ['RS256'],
     };
-    
+
     if (options.issuer) verifyOptions.issuer = options.issuer;
     if (options.audience) verifyOptions.audience = options.audience;
     if (options.requiredClaims) verifyOptions.requiredClaims = options.requiredClaims;
@@ -429,34 +389,37 @@ export class JwtManager {
     if ('getJwks' in this.keyProvider) {
       return (this.keyProvider as EnvironmentKeyProvider).getJwks();
     }
-    
-    // For other providers, construct JWKS from verification keys
+
     const keys = await this.keyProvider.getVerificationKeys();
     const jwks: JwksResponse = { keys: [] };
-    
-    // This would need proper JWK conversion in a real implementation
-    for (const key of keys) {
-      // Convert KeyLike to JWK format
-      // Placeholder implementation
-    }
-    
+
     return jwks;
   }
 
-  /**
-   * Emergency purge: Remove all keys from the provider.
-   */
   async emergencyPurge(newPrivateKey?: KeyLike, newPublicKey?: KeyLike): Promise<string> {
+    let kid: string;
+
     if ('emergencyPurge' in this.keyProvider) {
-      return (this.keyProvider as any).emergencyPurge(newPrivateKey, newPublicKey);
+      kid = await (this.keyProvider as any).emergencyPurge(newPrivateKey, newPublicKey);
+    } else {
+
+      const result = await this.keyProvider.rotateKey();
+      kid = result.kid;
     }
-    
-    // Fallback: rotate keys if possible
-    const { kid } = await this.keyProvider.rotateKey();
+
+    this.clearCache();
+
     return kid;
   }
 
   clearCache(): void {
     this.verificationCache.clear();
+  }
+
+  invalidateKey(kid: string): void {
+    if (this.verificationCache.has(kid)) {
+      this.verificationCache.delete(kid);
+      console.log('[AUTH] Invalidated verification cache for key:', kid);
+    }
   }
 }

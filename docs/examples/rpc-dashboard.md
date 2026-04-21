@@ -32,7 +32,7 @@
 <body>
     <div class="container">
         <h1>RPC Dashboard</h1>
-        
+
         <div class="card">
             <h3>Execute RPC</h3>
             <div class="input-group">
@@ -87,8 +87,7 @@ runBtn.addEventListener('click', async () => {
   }
 
   try {
-    // This call is automatically proxied through the backend
-    // If a session exists, the client adds the Bearer token and CSRF header
+
     const result = await client.request(method, params);
     outputPre.innerText = JSON.stringify(result, null, 2);
   } catch (err) {

@@ -6,21 +6,21 @@ Shared TypeScript types for talak-web3 packages.
 
 ```bash
 npm install @talak-web3/types
-# or
+
 yarn add @talak-web3/types
-# or
+
 pnpm add @talak-web3/types
 ```
 
 ## Usage
 
 ```typescript
-import type { 
-  Chain, 
-  WalletConfig, 
+import type {
+  Chain,
+  WalletConfig,
   SIWEMessage,
   Session,
-  TransactionRequest 
+  TransactionRequest
 } from '@talak-web3/types';
 ```
 

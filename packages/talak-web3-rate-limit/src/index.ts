@@ -1,13 +1,3 @@
-/**
- * Rate limiting utilities for talak-web3
- * 
- * Provides both in-memory and Redis-backed rate limiting implementations.
- */
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
@@ -19,16 +9,37 @@ export interface RateLimiter {
   reset(key: string): Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
-// Redis Rate Limiter (Production-grade, distributed)
-// ---------------------------------------------------------------------------
+export function extractSubnet(ip: string): string {
 
-/**
- * Sliding window rate limiting using Redis and Lua script for atomicity.
- * Supports variable cost (token consumption) and adaptive penalties.
- * Key structure: rate_limit:{key}
- * Returns: { allowed(0/1), remaining, resetAtMs }
- */
+  if (ip.includes(':')) {
+
+    const parts = ip.split(':');
+    if (parts.length >= 4) {
+      return parts.slice(0, 4).join(':') + '::/64';
+    }
+
+    return ip.split('::')[0] + '::/64';
+  }
+
+  const octets = ip.split('.');
+  if (octets.length === 4) {
+    const lastOctet = parseInt(octets[3] || '0', 10);
+    const subnetLastOctet = lastOctet & 0xFC;
+    return `${octets[0]}.${octets[1]}.${octets[2]}.${subnetLastOctet}/30`;
+  }
+
+  throw new Error(`Invalid IP format: ${ip}`);
+}
+
+export function normalizeIpForRateLimit(ip: string): string {
+  try {
+    return extractSubnet(ip);
+  } catch {
+
+    return ip;
+  }
+}
+
 const adaptiveSlidingWindowLua = `
 local key = KEYS[1]
 local windowMs = tonumber(ARGV[1])
@@ -74,21 +85,16 @@ export class RedisRateLimiter implements RateLimiter {
     this.windowMs = opts.windowMs;
   }
 
-  /**
-   * Checks if a request is allowed.
-   * @param key Unique identifier (IP, address, etc.)
-   * @param cost Number of tokens to consume (default: 1)
-   */
   async check(key: string, cost = 1): Promise<RateLimitResult> {
     const fullKey = `rate_limit:${key}`;
     const now = Date.now();
 
     const res = await this.redis.eval(
-      adaptiveSlidingWindowLua, 
-      1, 
-      fullKey, 
-      String(this.windowMs), 
-      String(this.capacity), 
+      adaptiveSlidingWindowLua,
+      1,
+      fullKey,
+      String(this.windowMs),
+      String(this.capacity),
       String(now),
       String(cost)
     ) as unknown;
@@ -104,15 +110,10 @@ export class RedisRateLimiter implements RateLimiter {
     };
   }
 
-  /**
-   * Forcefully applies a penalty by consuming tokens regardless of current state.
-   * Useful for penalizing failed auth attempts.
-   */
   async penalize(key: string, cost: number): Promise<void> {
     const fullKey = `rate_limit:${key}`;
     const now = Date.now();
-    
-    // Just add tokens to the set to reduce remaining capacity
+
     for (let i = 0; i < cost; i++) {
       await this.redis.zadd(fullKey, now, `${now}:penalty:${i}:${Math.random()}`);
     }
@@ -124,10 +125,6 @@ export class RedisRateLimiter implements RateLimiter {
   }
 }
 
-/**
- * Factory for production-grade rate limiters.
- * Note: Memory fallback is disabled for security reasons.
- */
 export function createRateLimiter(opts: {
   redis: any;
   capacity: number;
