@@ -8,8 +8,8 @@ See **[`packages.md`](../packages.md)** in the repository root for a **full tabl
 
 ## Naming
 
-- Folders often use the `talak-web3-*` prefix; the **npm name** is usually under the `@talak-web3/*` scope (for example `packages/talak-web3-auth` → `@talak-web3/auth`).
-- A few packages live under `packages/@talak-web3/<name>/` and publish as `@talak-web3/<name>`.
+- All scoped packages live under `packages/<name>/` and publish as `@talak-web3/<name>` (for example `packages/auth` → `@talak-web3/auth`).
+- The umbrella SDK package lives at `packages/talak-web3` and publishes as `talak-web3` (no scope).
 
 ## Development
 

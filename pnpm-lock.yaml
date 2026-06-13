@@ -134,16 +134,16 @@ importers:
         version: 1.19.14(hono@4.12.16)
       '@talak-web3/auth':
         specifier: workspace:*
-        version: link:../../packages/@talak-web3/auth
+        version: link:../../packages/auth
       '@talak-web3/core':
         specifier: workspace:*
-        version: link:../../packages/@talak-web3/core
+        version: link:../../packages/core
       '@talak-web3/errors':
         specifier: workspace:*
-        version: link:../../packages/@talak-web3/errors
+        version: link:../../packages/errors
       '@talak-web3/types':
         specifier: workspace:*
-        version: link:../../packages/@talak-web3/types
+        version: link:../../packages/types
       hono:
         specifier: ^4.12.16
         version: 4.12.16
@@ -173,7 +173,7 @@ importers:
         specifier: 'catalog:'
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5(vitest@4.1.4))(vite@8.0.8(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/@talak-web3/adapters:
+  packages/adapters:
     dependencies:
       '@ceramicnetwork/http-client':
         specifier: 6.4.0
@@ -191,7 +191,7 @@ importers:
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/ai:
+  packages/ai:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -210,13 +210,13 @@ importers:
         specifier: 'catalog:'
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5(vitest@4.1.4))(vite@8.0.8(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/@talak-web3/analytics:
+  packages/analytics:
     dependencies:
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/auth:
+  packages/auth:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -241,7 +241,7 @@ importers:
         specifier: ^4.0.0
         version: 4.0.11(@opentelemetry/api@1.9.1)
 
-  packages/@talak-web3/cli:
+  packages/cli:
     dependencies:
       '@talak-web3/templates':
         specifier: workspace:*
@@ -254,13 +254,13 @@ importers:
         specifier: 'catalog:'
         version: 25.6.0
 
-  packages/@talak-web3/client:
+  packages/client:
     dependencies:
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/config:
+  packages/config:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -275,7 +275,7 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
 
-  packages/@talak-web3/core:
+  packages/core:
     dependencies:
       '@talak-web3/auth':
         specifier: workspace:*
@@ -306,21 +306,21 @@ importers:
         specifier: ^5.10.1
         version: 5.10.1
 
-  packages/@talak-web3/dashboard: {}
+  packages/dashboard: {}
 
-  packages/@talak-web3/devtools:
+  packages/devtools:
     dependencies:
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/errors:
+  packages/errors:
     dependencies:
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/handlers:
+  packages/handlers:
     dependencies:
       '@talak-web3/middleware':
         specifier: workspace:*
@@ -329,7 +329,7 @@ importers:
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/hooks:
+  packages/hooks:
     dependencies:
       '@talak-web3/types':
         specifier: workspace:*
@@ -342,7 +342,7 @@ importers:
         specifier: 19.2.14
         version: 19.2.14
 
-  packages/@talak-web3/identity:
+  packages/identity:
     dependencies:
       '@talak-web3/adapters':
         specifier: workspace:*
@@ -351,7 +351,7 @@ importers:
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/middleware:
+  packages/middleware:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -363,13 +363,13 @@ importers:
         specifier: workspace:*
         version: link:../utils
 
-  packages/@talak-web3/orgs:
+  packages/orgs:
     dependencies:
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
 
-  packages/@talak-web3/plugins:
+  packages/plugins:
     dependencies:
       '@talak-web3/types':
         specifier: workspace:*
@@ -379,13 +379,13 @@ importers:
         specifier: 'catalog:'
         version: 25.6.0
 
-  packages/@talak-web3/rate-limit:
+  packages/rate-limit:
     dependencies:
       ioredis:
         specifier: 5.0.0
         version: 5.0.0
 
-  packages/@talak-web3/realtime:
+  packages/realtime:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -398,7 +398,7 @@ importers:
         specifier: 'catalog:'
         version: 25.6.0
 
-  packages/@talak-web3/rpc:
+  packages/rpc:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -417,9 +417,49 @@ importers:
         specifier: 'catalog:'
         version: 25.6.0
 
-  packages/@talak-web3/templates: {}
+  packages/talak-web3:
+    dependencies:
+      ioredis:
+        specifier: 5.10.1
+        version: 5.10.1
+      jose:
+        specifier: 6.2.2
+        version: 6.2.2
+      react:
+        specifier: '>=18.0.0'
+        version: 19.2.5
+      react-dom:
+        specifier: '>=18.0.0'
+        version: 19.2.5(react@19.2.5)
+      viem:
+        specifier: 2.48.1
+        version: 2.48.1(typescript@6.0.3)(zod@4.3.6)
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@talak-web3/client':
+        specifier: workspace:*
+        version: link:../client
+      '@talak-web3/config':
+        specifier: workspace:*
+        version: link:../config
+      '@talak-web3/core':
+        specifier: workspace:*
+        version: link:../core
+      '@talak-web3/hooks':
+        specifier: workspace:*
+        version: link:../hooks
+      '@talak-web3/rpc':
+        specifier: workspace:*
+        version: link:../rpc
+      '@talak-web3/types':
+        specifier: workspace:*
+        version: link:../types
 
-  packages/@talak-web3/test-utils:
+  packages/templates: {}
+
+  packages/test-utils:
     dependencies:
       '@talak-web3/auth':
         specifier: workspace:*
@@ -450,7 +490,7 @@ importers:
         specifier: 'catalog:'
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5(vitest@4.1.4))(vite@8.0.8(@types/node@25.6.0)(esbuild@0.28.0)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/@talak-web3/tx:
+  packages/tx:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -462,9 +502,9 @@ importers:
         specifier: 2.48.1
         version: 2.48.1(typescript@6.0.3)(zod@4.3.6)
 
-  packages/@talak-web3/types: {}
+  packages/types: {}
 
-  packages/@talak-web3/utils:
+  packages/utils:
     dependencies:
       '@talak-web3/errors':
         specifier: workspace:*
@@ -472,46 +512,6 @@ importers:
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
-
-  packages/talak-web3:
-    dependencies:
-      ioredis:
-        specifier: 5.10.1
-        version: 5.10.1
-      jose:
-        specifier: 6.2.2
-        version: 6.2.2
-      react:
-        specifier: '>=18.0.0'
-        version: 19.2.5
-      react-dom:
-        specifier: '>=18.0.0'
-        version: 19.2.5(react@19.2.5)
-      viem:
-        specifier: 2.48.1
-        version: 2.48.1(typescript@6.0.3)(zod@4.3.6)
-      zod:
-        specifier: 4.3.6
-        version: 4.3.6
-    devDependencies:
-      '@talak-web3/client':
-        specifier: workspace:*
-        version: link:../@talak-web3/client
-      '@talak-web3/config':
-        specifier: workspace:*
-        version: link:../@talak-web3/config
-      '@talak-web3/core':
-        specifier: workspace:*
-        version: link:../@talak-web3/core
-      '@talak-web3/hooks':
-        specifier: workspace:*
-        version: link:../@talak-web3/hooks
-      '@talak-web3/rpc':
-        specifier: workspace:*
-        version: link:../@talak-web3/rpc
-      '@talak-web3/types':
-        specifier: workspace:*
-        version: link:../@talak-web3/types
 
 packages:
 
