@@ -35,7 +35,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@talak-web3/middleware": "workspace:*",
     "@talak-web3/types": "workspace:*"
   }
 }
