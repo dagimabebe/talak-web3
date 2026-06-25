@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Auth as TalakWeb3AuthInterface } from "@talak-web3/types";
 import type { KeyObject } from "jose";
 import { verifyMessage } from "viem";
@@ -50,14 +50,14 @@ function validateIssuedAt(
 
   if (isNaN(issuedTime)) {
     throw new TalakWeb3Error("Invalid SIWE issued-at timestamp", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
     });
   }
 
   if (Math.abs(now - issuedTime) > toleranceMs) {
     throw new TalakWeb3Error("SIWE message timestamp out of tolerance - possible replay attack", {
-      code: "AUTH_SIWE_TIME_DRIFT",
+      code: AUTH_ERROR_CODES.SIWE_TIME_DRIFT,
       status: 401,
     });
   }
@@ -66,7 +66,7 @@ function validateIssuedAt(
 function validateChainId(chainId: number, allowedChains: number[]): void {
   if (allowedChains.length > 0 && !allowedChains.includes(chainId)) {
     throw new TalakWeb3Error("Chain ID not allowed", {
-      code: "AUTH_CHAIN_NOT_ALLOWED",
+      code: AUTH_ERROR_CODES.CHAIN_NOT_ALLOWED,
       status: 400,
       data: { chainId, allowedChains },
     });
@@ -85,7 +85,7 @@ function parseSiweMessage(message: string): SiweFields {
 
   if (message.length > 10000) {
     throw new TalakWeb3Error("SIWE message too long", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
     });
   }
@@ -98,7 +98,7 @@ function parseSiweMessage(message: string): SiweFields {
 
   if (!domain || domain.length > 253 || !isValidHostname(domain)) {
     throw new TalakWeb3Error("Invalid SIWE domain", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
     });
   }
@@ -108,7 +108,7 @@ function parseSiweMessage(message: string): SiweFields {
 
   if (!addressMatch?.[1]) {
     throw new TalakWeb3Error("Invalid SIWE address format", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
     });
   }
@@ -128,7 +128,7 @@ function parseSiweMessage(message: string): SiweFields {
   ) {
     if (potentialStatement.length > 1000) {
       throw new TalakWeb3Error("SIWE statement too long", {
-        code: "AUTH_SIWE_PARSE_ERROR",
+        code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
         status: 400,
       });
     }
@@ -139,7 +139,7 @@ function parseSiweMessage(message: string): SiweFields {
   const uriMatches = message.match(/^URI: (.+)$/gm);
   if (uriMatches && uriMatches.length > 1) {
     throw new TalakWeb3Error("Multiple URI fields detected", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
     });
   }
@@ -147,7 +147,7 @@ function parseSiweMessage(message: string): SiweFields {
   const nonceMatches = message.match(/^Nonce: ([A-Za-z0-9]+)$/gm);
   if (nonceMatches && nonceMatches.length > 1) {
     throw new TalakWeb3Error("Multiple Nonce fields detected", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
     });
   }
@@ -166,7 +166,7 @@ function parseSiweMessage(message: string): SiweFields {
       new URL(uriMatch[1]);
     } catch {
       throw new TalakWeb3Error("Invalid SIWE URI format", {
-        code: "AUTH_SIWE_PARSE_ERROR",
+        code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
         status: 400,
       });
     }
@@ -174,7 +174,7 @@ function parseSiweMessage(message: string): SiweFields {
 
   if (nonceMatch?.[1] && (nonceMatch[1].length < 8 || nonceMatch[1].length > 128)) {
     throw new TalakWeb3Error("Invalid SIWE nonce length", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
     });
   }
@@ -197,7 +197,7 @@ function parseSiweMessage(message: string): SiweFields {
     !issuedAtMatch?.[1]
   ) {
     throw new TalakWeb3Error("Invalid SIWE message format", {
-      code: "AUTH_SIWE_PARSE_ERROR",
+      code: AUTH_ERROR_CODES.SIWE_PARSE_ERROR,
       status: 400,
       data: {
         hasDomain: !!domain,
@@ -304,17 +304,17 @@ export class InMemoryRefreshStore implements RefreshStore {
     const old = this.sessions.get(hash);
     if (!old)
       throw new TalakWeb3Error("Refresh session not found", {
-        code: "AUTH_REFRESH_NOT_FOUND",
+        code: AUTH_ERROR_CODES.REFRESH_NOT_FOUND,
         status: 401,
       });
     if (old.revoked)
       throw new TalakWeb3Error("Refresh token already used or revoked", {
-        code: "AUTH_REFRESH_REVOKED",
+        code: AUTH_ERROR_CODES.REFRESH_REVOKED,
         status: 401,
       });
     if (Date.now() > old.expiresAt)
       throw new TalakWeb3Error("Refresh token expired", {
-        code: "AUTH_REFRESH_EXPIRED",
+        code: AUTH_ERROR_CODES.REFRESH_EXPIRED,
         status: 401,
       });
 
@@ -391,7 +391,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     if (!opts || !opts.nonceStore || !opts.refreshStore || !opts.revocationStore) {
       throw new TalakWeb3Error(
         "CRITICAL: Mandatory auth stores (nonce, refresh, revocation) are missing from the configuration. This is a fatal error in production.",
-        { code: "AUTH_STORES_MISSING", status: 500 },
+        { code: AUTH_ERROR_CODES.STORES_MISSING, status: 500 },
       );
     }
 
@@ -479,7 +479,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
 
     if (this.expectedDomain && fields.domain !== this.expectedDomain) {
       throw new TalakWeb3Error("SIWE domain mismatch", {
-        code: "AUTH_SIWE_DOMAIN_MISMATCH",
+        code: AUTH_ERROR_CODES.SIWE_DOMAIN_MISMATCH,
         status: 401,
         data: { domain: fields.domain },
       });
@@ -490,7 +490,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     if (fields.expirationTime) {
       if (new Date(fields.expirationTime) < new Date()) {
         throw new TalakWeb3Error("SIWE message has expired", {
-          code: "AUTH_SIWE_EXPIRED",
+          code: AUTH_ERROR_CODES.SIWE_EXPIRED,
           status: 401,
         });
       }
@@ -504,7 +504,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
 
     if (!valid) {
       throw new TalakWeb3Error("Invalid SIWE signature", {
-        code: "AUTH_SIWE_INVALID_SIG",
+        code: AUTH_ERROR_CODES.SIWE_INVALID_SIG,
         status: 401,
       });
     }
@@ -512,7 +512,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     const consumed = await this.nonceStore.consume(fields.address.toLowerCase(), fields.nonce);
     if (!consumed) {
       throw new TalakWeb3Error("SIWE nonce invalid or already used", {
-        code: "AUTH_SIWE_NONCE_REPLAY",
+        code: AUTH_ERROR_CODES.SIWE_NONCE_REPLAY,
         status: 401,
       });
     }
@@ -592,7 +592,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
       });
     } catch (err) {
       throw new TalakWeb3Error("Invalid or expired session token", {
-        code: "AUTH_TOKEN_INVALID",
+        code: AUTH_ERROR_CODES.TOKEN_INVALID,
         status: 401,
         cause: err,
       });
@@ -601,7 +601,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     const jti = (payload as Record<string, unknown>)["jti"];
     if (typeof jti === "string" && (await this.revocations.isRevoked(jti))) {
       throw new TalakWeb3Error("Session has been revoked", {
-        code: "AUTH_TOKEN_REVOKED",
+        code: AUTH_ERROR_CODES.TOKEN_REVOKED,
         status: 401,
       });
     }
@@ -609,7 +609,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     const sub = (payload as Record<string, unknown>)["sub"];
     if (typeof sub !== "string" || sub.length === 0) {
       throw new TalakWeb3Error("Invalid session token subject", {
-        code: "AUTH_TOKEN_INVALID_SUB",
+        code: AUTH_ERROR_CODES.TOKEN_INVALID_SUB,
         status: 401,
       });
     }
@@ -618,7 +618,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     const chainId = (payload as Record<string, unknown>)["chainId"];
     if (typeof address !== "string" || typeof chainId !== "number") {
       throw new TalakWeb3Error("Malformed session token payload", {
-        code: "AUTH_TOKEN_MALFORMED",
+        code: AUTH_ERROR_CODES.TOKEN_MALFORMED,
         status: 401,
       });
     }
@@ -644,25 +644,25 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
               console.debug("[AUTH] Token accepted with NAT tolerance", { subnet: currentSubnet });
             } else {
               throw new TalakWeb3Error("Token context mismatch - possible token theft", {
-                code: "AUTH_TOKEN_CONTEXT_MISMATCH",
+                code: AUTH_ERROR_CODES.TOKEN_CONTEXT_MISMATCH,
                 status: 401,
               });
             }
           } else {
             throw new TalakWeb3Error("Token context mismatch - possible token theft", {
-              code: "AUTH_TOKEN_CONTEXT_MISMATCH",
+              code: AUTH_ERROR_CODES.TOKEN_CONTEXT_MISMATCH,
               status: 401,
             });
           }
         } else {
           throw new TalakWeb3Error("Token context mismatch - possible token theft", {
-            code: "AUTH_TOKEN_CONTEXT_MISMATCH",
+            code: AUTH_ERROR_CODES.TOKEN_CONTEXT_MISMATCH,
             status: 401,
           });
         }
       } else if (this.timeSource.now() > this.contextEnforcementDate) {
         throw new TalakWeb3Error("Token binding required - please re-authenticate", {
-          code: "AUTH_CONTEXT_REQUIRED",
+          code: AUTH_ERROR_CODES.CONTEXT_REQUIRED,
           status: 401,
         });
       } else {

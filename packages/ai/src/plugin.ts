@@ -1,3 +1,4 @@
+import { AI_ERROR_CODES } from "@talak-web3/errors";
 import type {
   TalakWeb3Context,
   AiAgent,
@@ -28,7 +29,7 @@ export class TalakWeb3AiPlugin implements AiAgent {
     this.mockMode = !cfg?.apiKey && process.env["NODE_ENV"] === "test";
     if (!cfg?.apiKey && !this.mockMode) {
       throw new AiError("AI config missing (config.ai.apiKey)", {
-        code: "AI_CONFIG_MISSING",
+        code: AI_ERROR_CODES.CONFIG_MISSING,
         status: 500,
       });
     }
@@ -57,7 +58,7 @@ export class TalakWeb3AiPlugin implements AiAgent {
 
     if (!this.client) {
       throw new AiError("AI client not initialized", {
-        code: "AI_CLIENT_NOT_INITIALIZED",
+        code: AI_ERROR_CODES.CLIENT_NOT_INITIALIZED,
         status: 500,
       });
     }
@@ -110,7 +111,7 @@ export class TalakWeb3AiPlugin implements AiAgent {
           const tool = toolMap.get(call.tool);
           if (!tool) {
             throw new AiError(`Unknown tool: ${call.tool}`, {
-              code: "AI_TOOL_UNKNOWN",
+              code: AI_ERROR_CODES.TOOL_UNKNOWN,
               status: 400,
             });
           }

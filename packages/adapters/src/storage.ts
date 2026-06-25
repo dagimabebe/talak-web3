@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, STORAGE_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Context } from "@talak-web3/types";
 
 import type { StorageAdapter } from "./index.js";
@@ -19,7 +19,7 @@ export class PinataStorageAdapter implements StorageAdapter {
     this.jwt = opts.jwt ?? process.env["PINATA_JWT"] ?? "";
     if (!this.jwt) {
       throw new TalakWeb3Error("Missing Pinata JWT (set PINATA_JWT or pass opts.jwt)", {
-        code: "STORAGE_PINATA_JWT_MISSING",
+        code: STORAGE_ERROR_CODES.PINATA_JWT_MISSING,
         status: 500,
       });
     }
@@ -49,7 +49,7 @@ export class PinataStorageAdapter implements StorageAdapter {
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
       throw new TalakWeb3Error(`Pinata upload failed: HTTP ${res.status} ${txt}`.trim(), {
-        code: "STORAGE_PUT_FAILED",
+        code: STORAGE_ERROR_CODES.PUT_FAILED,
         status: 502,
       });
     }
@@ -57,7 +57,7 @@ export class PinataStorageAdapter implements StorageAdapter {
     const json = (await res.json()) as { IpfsHash?: string };
     if (!json.IpfsHash) {
       throw new TalakWeb3Error("Pinata response missing IpfsHash", {
-        code: "STORAGE_PUT_BAD_RESPONSE",
+        code: STORAGE_ERROR_CODES.PUT_BAD_RESPONSE,
         status: 502,
       });
     }
@@ -72,7 +72,7 @@ export class PinataStorageAdapter implements StorageAdapter {
     const res = await fetch(url);
     if (!res.ok) {
       throw new TalakWeb3Error(`IPFS fetch failed: HTTP ${res.status}`, {
-        code: "STORAGE_GET_FAILED",
+        code: STORAGE_ERROR_CODES.GET_FAILED,
         status: 502,
       });
     }

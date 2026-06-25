@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, CIRCUIT_ERROR_CODES } from "@talak-web3/errors";
 
 export interface RedisLike {
   get(key: string): Promise<string | null>;
@@ -60,7 +60,7 @@ export class DistributedCircuitBreaker {
       const now = Date.now();
       if (state.openedAt && now - state.openedAt < this.config.halfOpenTimeout) {
         throw new TalakWeb3Error("Circuit breaker open", {
-          code: "CIRCUIT_OPEN",
+          code: CIRCUIT_ERROR_CODES.OPEN,
           status: 503,
           data: { providerId, openedAt: state.openedAt },
         });

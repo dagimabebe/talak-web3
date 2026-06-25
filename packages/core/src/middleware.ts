@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, INTERNAL_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Context, IMiddlewareChain, MiddlewareHandler } from "@talak-web3/types";
 
 export const errorHandlingMiddleware: MiddlewareHandler = async (req, next, ctx) => {
@@ -21,7 +21,7 @@ export const errorHandlingMiddleware: MiddlewareHandler = async (req, next, ctx)
     }
 
     throw new TalakWeb3Error("An internal server error occurred. Please contact support.", {
-      code: "INTERNAL_SERVER_ERROR",
+      code: INTERNAL_ERROR_CODES.SERVER_ERROR,
       status: 500,
     });
   }

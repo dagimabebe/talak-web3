@@ -5,7 +5,7 @@ import {
   type RefreshStore,
 } from "@talak-web3/auth";
 import { validateConfig } from "@talak-web3/config";
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, RPC_ERROR_CODES, PLUGIN_ERROR_CODES } from "@talak-web3/errors";
 import { UnifiedRpc } from "@talak-web3/rpc";
 import type {
   TalakWeb3BaseConfig,
@@ -210,13 +210,22 @@ export function createTalakWeb3(input: unknown = {}): TalakWeb3Instance {
     ...contextShape,
     rpc: {
       request: async () => {
-        throw new TalakWeb3Error("RPC not initialized", { code: "RPC_NOT_READY", status: 500 });
+        throw new TalakWeb3Error("RPC not initialized", {
+          code: RPC_ERROR_CODES.NOT_READY,
+          status: 500,
+        });
       },
       pauseHealthChecks: () => {
-        throw new TalakWeb3Error("RPC not initialized", { code: "RPC_NOT_READY", status: 500 });
+        throw new TalakWeb3Error("RPC not initialized", {
+          code: RPC_ERROR_CODES.NOT_READY,
+          status: 500,
+        });
       },
       resumeHealthChecks: () => {
-        throw new TalakWeb3Error("RPC not initialized", { code: "RPC_NOT_READY", status: 500 });
+        throw new TalakWeb3Error("RPC not initialized", {
+          code: RPC_ERROR_CODES.NOT_READY,
+          status: 500,
+        });
       },
       stop: () => {},
     },
@@ -242,13 +251,13 @@ export function createTalakWeb3(input: unknown = {}): TalakWeb3Instance {
       for (const plugin of config.plugins ?? []) {
         if (!isTalakWeb3Plugin(plugin)) {
           throw new TalakWeb3Error("Invalid plugin config: expected TalakWeb3Plugin object", {
-            code: "PLUGIN_INVALID",
+            code: PLUGIN_ERROR_CODES.INVALID,
             status: 400,
           });
         }
         if (plugins.has(plugin.name)) {
           throw new TalakWeb3Error(`Plugin "${plugin.name}" already registered`, {
-            code: "PLUGIN_DUPLICATE",
+            code: PLUGIN_ERROR_CODES.DUPLICATE,
             status: 400,
           });
         }

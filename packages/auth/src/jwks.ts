@@ -3,7 +3,7 @@ import { exportSPKI, exportJWK, type KeyObject } from "jose";
 type KeyLike = CryptoKey | KeyObject;
 import { createHash, randomBytes } from "node:crypto";
 
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 
 export interface JsonWebKey {
   kty: "RSA";
@@ -50,7 +50,7 @@ export class JwksManager {
   ): Promise<void> {
     if (this.usedKids.has(kid)) {
       throw new TalakWeb3Error("Duplicate key ID detected - possible key rotation attack", {
-        code: "AUTH_DUPLICATE_KID",
+        code: AUTH_ERROR_CODES.DUPLICATE_KID,
         status: 500,
       });
     }
@@ -59,7 +59,7 @@ export class JwksManager {
     const jwk = await exportJWK(publicKey);
     if (jwk.kty !== "RSA") {
       throw new TalakWeb3Error("Non-RSA key in RS256 JWKS - algorithm mismatch", {
-        code: "AUTH_ALG_MISMATCH",
+        code: AUTH_ERROR_CODES.ALG_MISMATCH,
         status: 500,
       });
     }
@@ -107,7 +107,7 @@ export class JwksManager {
 
       if (jwk.kty !== "RSA" || !jwk.n || !jwk.e) {
         throw new TalakWeb3Error("Invalid RSA key: missing modulus or exponent", {
-          code: "AUTH_INVALID_RSA_KEY",
+          code: AUTH_ERROR_CODES.INVALID_RSA_KEY,
           status: 500,
         });
       }
@@ -151,7 +151,7 @@ export class JwksManager {
   revokeKey(kid: string): void {
     if (kid === this.primaryKid) {
       throw new TalakWeb3Error("Cannot revoke primary key without rotation", {
-        code: "AUTH_REVOKE_PRIMARY_FORBIDDEN",
+        code: AUTH_ERROR_CODES.REVOKE_PRIMARY_FORBIDDEN,
         status: 403,
       });
     }

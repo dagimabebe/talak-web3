@@ -1,3 +1,5 @@
+export * from "./codes.js";
+
 export class TalakWeb3Error extends Error {
   readonly code: string;
   readonly status: number;

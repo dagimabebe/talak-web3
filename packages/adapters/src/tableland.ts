@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, TABLELAND_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Context } from "@talak-web3/types";
 
 import type { TablelandAdapter } from "./index.js";
@@ -26,7 +26,7 @@ export class TablelandPlugin implements TablelandAdapter {
       throw new TalakWeb3Error(
         "TABLELAND_PRIVATE_KEY env var or config.tableland.privateKey is required",
         {
-          code: "TABLELAND_KEY_MISSING",
+          code: TABLELAND_ERROR_CODES.KEY_MISSING,
           status: 500,
         },
       );
@@ -49,7 +49,7 @@ export class TablelandPlugin implements TablelandAdapter {
       return rows;
     } catch (error) {
       throw new TalakWeb3Error(`Tableland query failed: ${String(error)}`, {
-        code: "TABLELAND_QUERY_ERROR",
+        code: TABLELAND_ERROR_CODES.QUERY_ERROR,
         status: 500,
         cause: error,
       });

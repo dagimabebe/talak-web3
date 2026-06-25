@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AA_ERROR_CODES, TX_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Context, Address, Hex } from "@talak-web3/types";
 import { encodeFunctionData, keccak256, encodeAbiParameters, parseAbiParameters } from "viem";
 
@@ -104,7 +104,7 @@ export class AccountAbstractionClient {
     }
 
     throw new TalakWeb3Error("Failed to fetch smart account nonce via any supported method", {
-      code: "AA_NONCE_FAILED",
+      code: AA_ERROR_CODES.NONCE_FAILED,
       status: 502,
       cause: lastError,
     });
@@ -169,7 +169,7 @@ export class AccountAbstractionClient {
       await new Promise((r) => setTimeout(r, 2_000));
     }
     throw new TalakWeb3Error(`UserOperation ${userOpHash} not mined within ${timeoutMs}ms`, {
-      code: "TX_RECEIPT_TIMEOUT",
+      code: TX_ERROR_CODES.RECEIPT_TIMEOUT,
       status: 504,
     });
   }

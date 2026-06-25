@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type Redis from "ioredis";
 
 export interface RedisConfigAssertion {
@@ -93,7 +93,7 @@ export async function assertRedisConfiguration(redis: Redis): Promise<void> {
     console.error(errorMessage);
 
     throw new TalakWeb3Error("Redis configuration assertion failed", {
-      code: "AUTH_REDIS_CONFIG_ASSERTION_FAILED",
+      code: AUTH_ERROR_CODES.REDIS_CONFIG_ASSERTION_FAILED,
       status: 503,
       data: { failures },
     });
@@ -160,7 +160,7 @@ export async function assertRedisReplication(
     console.error(errorMessage);
 
     throw new TalakWeb3Error("Redis replication assertion failed", {
-      code: "AUTH_REDIS_REPLICATION_ASSERTION_FAILED",
+      code: AUTH_ERROR_CODES.REDIS_REPLICATION_ASSERTION_FAILED,
       status: 503,
       cause: err,
     });

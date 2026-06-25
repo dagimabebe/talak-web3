@@ -8,7 +8,7 @@ import {
 } from "jose";
 
 type KeyLike = CryptoKey | KeyObject;
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type { RedisClientType } from "redis"; // @ts-ignore: redis types optional
 
 import { JwksManager, type JwksResponse, type KeyRotationConfig } from "./jwks.js";
@@ -49,7 +49,7 @@ export class EnvironmentKeyProvider implements KeyProvider {
     const key = this.jwksManager.getPrimaryKey();
     if (!key) {
       throw new TalakWeb3Error("No signing key available", {
-        code: "AUTH_NO_SIGNING_KEY",
+        code: AUTH_ERROR_CODES.NO_SIGNING_KEY,
         status: 500,
       });
     }
@@ -64,7 +64,7 @@ export class EnvironmentKeyProvider implements KeyProvider {
     const key = this.jwksManager.getPrimaryKey();
     if (!key || !key.privateKey) {
       throw new TalakWeb3Error("No private key available for signing", {
-        code: "AUTH_NO_PRIVATE_KEY",
+        code: AUTH_ERROR_CODES.NO_PRIVATE_KEY,
         status: 500,
       });
     }
@@ -92,7 +92,7 @@ export class EnvironmentKeyProvider implements KeyProvider {
 
   async rotateKey(): Promise<{ kid: string; publicKey: KeyLike }> {
     throw new TalakWeb3Error("Key rotation not supported with environment provider", {
-      code: "AUTH_ROTATION_NOT_SUPPORTED",
+      code: AUTH_ERROR_CODES.ROTATION_NOT_SUPPORTED,
       status: 501,
     });
   }
@@ -132,7 +132,7 @@ export class EnvironmentKeyProvider implements KeyProvider {
     if (!primaryPrivPem || !primaryPubPem) {
       throw new TalakWeb3Error(
         "JWT_PRIVATE_KEY and JWT_PUBLIC_KEY environment variables are required.",
-        { code: "AUTH_JWT_KEYS_MISSING", status: 500 },
+        { code: AUTH_ERROR_CODES.JWT_KEYS_MISSING, status: 500 },
       );
     }
 
@@ -142,7 +142,7 @@ export class EnvironmentKeyProvider implements KeyProvider {
       await this.jwksManager.addKey(primaryKidEnv, pub, priv, true);
     } catch (err) {
       throw new TalakWeb3Error("Failed to import primary JWT keys", {
-        code: "AUTH_JWT_KEYS_INVALID",
+        code: AUTH_ERROR_CODES.JWT_KEYS_INVALID,
         status: 500,
         cause: err,
       });
@@ -185,7 +185,7 @@ export function createKeyProvider(
       return new EnvironmentKeyProvider(config);
     default:
       throw new TalakWeb3Error(`Unsupported key provider type: ${type}`, {
-        code: "AUTH_INVALID_KEY_PROVIDER",
+        code: AUTH_ERROR_CODES.INVALID_KEY_PROVIDER,
         status: 500,
       });
   }
@@ -242,7 +242,7 @@ export class JwtManager {
     const match = /^(\d+)\s*([smhd])$/i.exec(trimmed);
     if (!match) {
       throw new TalakWeb3Error(`Invalid expiresIn format: ${value}`, {
-        code: "AUTH_INVALID_EXPIRES_IN",
+        code: AUTH_ERROR_CODES.INVALID_EXPIRES_IN,
         status: 400,
       });
     }
@@ -276,7 +276,7 @@ export class JwtManager {
 
     if (!kid) {
       throw new TalakWeb3Error("JWT missing key ID (kid)", {
-        code: "AUTH_JWT_MISSING_KID",
+        code: AUTH_ERROR_CODES.JWT_MISSING_KID,
         status: 401,
       });
     }
@@ -287,7 +287,7 @@ export class JwtManager {
       const key = verificationKeys.find((k) => k.kid === kid);
       if (!key) {
         throw new TalakWeb3Error(`Public key with kid "${kid}" not found`, {
-          code: "AUTH_PUBLIC_KEY_NOT_FOUND",
+          code: AUTH_ERROR_CODES.PUBLIC_KEY_NOT_FOUND,
           status: 401,
         });
       }

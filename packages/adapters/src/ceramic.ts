@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, CERAMIC_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Context } from "@talak-web3/types";
 
 import type { CeramicAdapter } from "./index.js";
@@ -20,7 +20,7 @@ export class CeramicPlugin implements CeramicAdapter {
     const ceramicConfig = this.ctx.config.ceramic;
     if (!ceramicConfig) {
       throw new TalakWeb3Error("Ceramic configuration missing", {
-        code: "CERAMIC_CONFIG_MISSING",
+        code: CERAMIC_ERROR_CODES.CONFIG_MISSING,
         status: 500,
       });
     }

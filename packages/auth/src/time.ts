@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type Redis from "ioredis";
 
 export interface TimeSource {
@@ -52,7 +52,7 @@ export class HttpTimeSource implements TimeSource {
     throw new TalakWeb3Error(
       `All time sources failed: ${errors.map((e) => e.message).join(", ")}`,
       {
-        code: "AUTH_TIME_SOURCE_UNAVAILABLE",
+        code: AUTH_ERROR_CODES.TIME_SOURCE_UNAVAILABLE,
         status: 503,
       },
     );
@@ -114,7 +114,7 @@ export class AuthoritativeTime {
           if (this.maxHistoricalDriftMs > this.maxDriftMs) {
             throw new TalakWeb3Error(
               `Historical time drift exceeded bound: ${this.maxHistoricalDriftMs}ms > ${this.maxDriftMs}ms — possible clock attack or misconfiguration`,
-              { code: "AUTH_TIME_HISTORICAL_DRIFT", status: 503 },
+              { code: AUTH_ERROR_CODES.TIME_HISTORICAL_DRIFT, status: 503 },
             );
           }
         }
@@ -136,7 +136,7 @@ export class AuthoritativeTime {
       throw new TalakWeb3Error(
         `Time regression detected: ${correctedTime} < ${this.lastObservedTime} — possible clock manipulation`,
         {
-          code: "AUTH_TIME_REGRESSION",
+          code: AUTH_ERROR_CODES.TIME_REGRESSION,
           status: 503,
         },
       );
@@ -146,7 +146,7 @@ export class AuthoritativeTime {
       throw new TalakWeb3Error(
         `Time jump exceeds bound: ${correctedTime - this.lastObservedTime}ms > ${this.maxForwardJumpMs}ms — possible clock attack`,
         {
-          code: "AUTH_TIME_JUMP",
+          code: AUTH_ERROR_CODES.TIME_JUMP,
           status: 503,
         },
       );
@@ -197,7 +197,7 @@ export class AuthoritativeTime {
         throw new TalakWeb3Error(
           `Clock drift exceeds threshold: ${newOffset}ms (max: ${this.maxDriftMs}ms) - possible time attack`,
           {
-            code: "AUTH_CLOCK_DRIFT",
+            code: AUTH_ERROR_CODES.CLOCK_DRIFT,
             status: 503,
           },
         );

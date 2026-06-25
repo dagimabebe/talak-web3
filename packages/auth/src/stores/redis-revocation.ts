@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type Redis from "ioredis";
 
 import type { RevocationStore } from "../contracts.js";
@@ -170,7 +170,7 @@ export class RedisRevocationStore implements RevocationStore {
       });
     } catch (err) {
       throw new TalakWeb3Error("Redis revocation store failure", {
-        code: "AUTH_REDIS_REVOCATION_ERROR",
+        code: AUTH_ERROR_CODES.REDIS_REVOCATION_ERROR,
         status: 503,
         cause: err,
       });
@@ -193,7 +193,7 @@ export class RedisRevocationStore implements RevocationStore {
     } catch (err) {
       if (this.strictMode) {
         throw new TalakWeb3Error("Redis revocation store unreachable — failing closed (CP mode)", {
-          code: "AUTH_REDIS_REVOCATION_ERROR",
+          code: AUTH_ERROR_CODES.REDIS_REVOCATION_ERROR,
           status: 503,
           cause: err,
         });
@@ -217,7 +217,7 @@ export class RedisRevocationStore implements RevocationStore {
       });
     } catch (err) {
       throw new TalakWeb3Error("Redis revocation store failure", {
-        code: "AUTH_REDIS_REVOCATION_ERROR",
+        code: AUTH_ERROR_CODES.REDIS_REVOCATION_ERROR,
         status: 503,
         cause: err,
       });
@@ -237,7 +237,7 @@ export class RedisRevocationStore implements RevocationStore {
     } catch (err) {
       if (this.strictMode) {
         throw new TalakWeb3Error("Redis revocation store unreachable — failing closed (CP mode)", {
-          code: "AUTH_REDIS_REVOCATION_ERROR",
+          code: AUTH_ERROR_CODES.REDIS_REVOCATION_ERROR,
           status: 503,
           cause: err,
         });

@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, CONFIG_ERROR_CODES } from "@talak-web3/errors";
 
 import { TalakWeb3ConfigSchema, type TalakWeb3Config } from "./schema";
 
@@ -11,7 +11,7 @@ export function validateConfig(input: unknown): TalakWeb3Config {
 
   if (!result.success) {
     throw new TalakWeb3Error("Invalid config", {
-      code: "CONFIG_INVALID",
+      code: CONFIG_ERROR_CODES.INVALID,
       status: 400,
       cause: result.error,
     });

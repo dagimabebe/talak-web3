@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
 
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, CRYPTO_ERROR_CODES } from "@talak-web3/errors";
 
 export class FieldEncryption {
   private readonly algorithm = "aes-256-gcm";
@@ -11,7 +11,7 @@ export class FieldEncryption {
     if (!masterKey || masterKey.length < 32) {
       throw new TalakWeb3Error(
         "DB_ENCRYPTION_KEY environment variable is required and must be at least 32 characters for AES-256.",
-        { code: "CRYPTO_KEY_INVALID", status: 500 },
+        { code: CRYPTO_ERROR_CODES.KEY_INVALID, status: 500 },
       );
     }
 
@@ -34,7 +34,7 @@ export class FieldEncryption {
     const parts = encryptedValue.split(":");
     if (parts.length !== 3) {
       throw new TalakWeb3Error("Invalid encrypted value format", {
-        code: "CRYPTO_DECRYPT_ERROR",
+        code: CRYPTO_ERROR_CODES.DECRYPT_ERROR,
         status: 400,
       });
     }

@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, RPC_ERROR_CODES, CONFIG_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Context, IRpc, RpcOptions, MiddlewareHandler } from "@talak-web3/types";
 
 import { DistributedCircuitBreaker, type CircuitBreakerConfig } from "./circuit-breaker.js";
@@ -58,7 +58,7 @@ export class UnifiedRpc implements IRpc {
     const redis = this.ctx.cache as unknown as CircuitBreakerConfig["redis"] | undefined;
     if (!redis) {
       throw new TalakWeb3Error("Redis client required for distributed circuit breaker", {
-        code: "CONFIG_ERROR",
+        code: CONFIG_ERROR_CODES.INVALID,
         status: 500,
       });
     }
@@ -180,7 +180,7 @@ export class UnifiedRpc implements IRpc {
       const endpoint = await this.getBestEndpoint(failover ? undefined : lastError);
       if (!endpoint) {
         throw new TalakWeb3Error("No RPC endpoints available", {
-          code: "RPC_NO_ENDPOINTS",
+          code: RPC_ERROR_CODES.NO_ENDPOINTS,
           status: 503,
         });
       }
@@ -211,7 +211,7 @@ export class UnifiedRpc implements IRpc {
     }
 
     throw new TalakWeb3Error(`RPC request failed after ${retries + 1} attempts`, {
-      code: "RPC_MAX_RETRIES",
+      code: RPC_ERROR_CODES.MAX_RETRIES,
       status: 502,
       cause: lastError,
     });

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, INTERNAL_ERROR_CODES } from "@talak-web3/errors";
 import type { MiddlewareHandler } from "hono";
 
 export interface InternalAuthConfig {
@@ -41,7 +41,7 @@ export class InternalAuth {
 
       if (!signature || !timestamp) {
         throw new TalakWeb3Error("Missing internal authentication headers", {
-          code: "INTERNAL_AUTH_MISSING",
+          code: INTERNAL_ERROR_CODES.AUTH_MISSING,
           status: 401,
         });
       }
@@ -50,7 +50,7 @@ export class InternalAuth {
       const now = Math.floor(Date.now() / 1000);
       if (isNaN(ts) || Math.abs(now - ts) > this.maxSkewSeconds) {
         throw new TalakWeb3Error("Internal authentication timestamp skew too large", {
-          code: "INTERNAL_AUTH_TIMESTAMP_SKEW",
+          code: INTERNAL_ERROR_CODES.AUTH_TIMESTAMP_SKEW,
           status: 401,
         });
       }
@@ -70,7 +70,7 @@ export class InternalAuth {
         !timingSafeEqual(signatureBuffer, expectedBuffer)
       ) {
         throw new TalakWeb3Error("Invalid internal authentication signature", {
-          code: "INTERNAL_AUTH_INVALID_SIGNATURE",
+          code: INTERNAL_ERROR_CODES.AUTH_INVALID_SIGNATURE,
           status: 401,
         });
       }

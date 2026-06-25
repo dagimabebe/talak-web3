@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, SECURITY_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Context, MiddlewareHandler } from "@talak-web3/types";
 
 export class SecurityInvariant {
@@ -8,7 +8,7 @@ export class SecurityInvariant {
       const origin = window.location.origin;
       if (!allowed.includes(origin)) {
         throw new TalakWeb3Error(`Unauthorized origin: ${origin}`, {
-          code: "SECURITY_UNAUTHORIZED_ORIGIN",
+          code: SECURITY_ERROR_CODES.UNAUTHORIZED_ORIGIN,
           status: 403,
         });
       }
@@ -22,7 +22,7 @@ export class SecurityInvariant {
     const matches = configStr.match(/0x[a-fA-F0-9]{64}/g);
     if (matches) {
       throw new TalakWeb3Error("Potential private key leak detected in config", {
-        code: "SECURITY_SECRET_LEAK",
+        code: SECURITY_ERROR_CODES.SECRET_LEAK,
         status: 400,
       });
     }
@@ -32,7 +32,7 @@ export class SecurityInvariant {
     const serialized = JSON.stringify(params);
     if (serialized.includes("__proto__") || serialized.includes("constructor")) {
       throw new TalakWeb3Error("Disallowed parameter key detected", {
-        code: "SECURITY_INVALID_PARAM",
+        code: SECURITY_ERROR_CODES.INVALID_PARAM,
         status: 400,
       });
     }

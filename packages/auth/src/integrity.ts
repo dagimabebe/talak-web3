@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 
 export interface DependencyCheck {
   packageName: string;
@@ -78,7 +78,7 @@ export function verifyDependencyIntegrity(
       process.exit(1);
     } else {
       throw new TalakWeb3Error("Dependency integrity check failed", {
-        code: "AUTH_DEPENDENCY_INTEGRITY_FAILURE",
+        code: AUTH_ERROR_CODES.DEPENDENCY_INTEGRITY_FAILURE,
         status: 500,
         data: { failures },
       });

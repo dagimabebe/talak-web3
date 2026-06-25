@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type Redis from "ioredis";
 
 import type { RefreshSession, RefreshStore } from "../contracts.js";
@@ -67,7 +67,7 @@ export class RedisRefreshStore implements RefreshStore {
       if (!raw) {
         await this.redis.unwatch();
         throw new TalakWeb3Error("Refresh session not found", {
-          code: "AUTH_REFRESH_NOT_FOUND",
+          code: AUTH_ERROR_CODES.REFRESH_NOT_FOUND,
           status: 401,
         });
       }
@@ -77,21 +77,21 @@ export class RedisRefreshStore implements RefreshStore {
       } catch {
         await this.redis.unwatch();
         throw new TalakWeb3Error("Refresh session not found", {
-          code: "AUTH_REFRESH_NOT_FOUND",
+          code: AUTH_ERROR_CODES.REFRESH_NOT_FOUND,
           status: 401,
         });
       }
       if (old.revoked) {
         await this.redis.unwatch();
         throw new TalakWeb3Error("Refresh token already used or revoked", {
-          code: "AUTH_REFRESH_REVOKED",
+          code: AUTH_ERROR_CODES.REFRESH_REVOKED,
           status: 401,
         });
       }
       if (Date.now() > old.expiresAt) {
         await this.redis.unwatch();
         throw new TalakWeb3Error("Refresh token expired", {
-          code: "AUTH_REFRESH_EXPIRED",
+          code: AUTH_ERROR_CODES.REFRESH_EXPIRED,
           status: 401,
         });
       }
@@ -125,7 +125,7 @@ export class RedisRefreshStore implements RefreshStore {
     }
 
     throw new TalakWeb3Error("Refresh rotation conflict — retry", {
-      code: "AUTH_REFRESH_CONFLICT",
+      code: AUTH_ERROR_CODES.REFRESH_CONFLICT,
       status: 409,
     });
   }

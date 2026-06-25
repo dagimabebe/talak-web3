@@ -1,4 +1,4 @@
-import { TalakWeb3Error } from "@talak-web3/errors";
+import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type Redis from "ioredis";
 
 import type { NonceStore } from "../contracts.js";
@@ -116,7 +116,7 @@ export class RedisNonceStore implements NonceStore {
       return true;
     } catch (err) {
       throw new TalakWeb3Error("Redis nonce store failure — failing closed", {
-        code: "AUTH_REDIS_NONCE_ERROR",
+        code: AUTH_ERROR_CODES.REDIS_NONCE_ERROR,
         status: 503,
         cause: err,
       });
@@ -132,7 +132,7 @@ export class RedisNonceStore implements NonceStore {
       return result === 1;
     } catch (err) {
       throw new TalakWeb3Error("Redis nonce verification failure — failing closed", {
-        code: "AUTH_REDIS_NONCE_ERROR",
+        code: AUTH_ERROR_CODES.REDIS_NONCE_ERROR,
         status: 503,
         cause: err,
       });
