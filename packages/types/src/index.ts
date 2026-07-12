@@ -70,18 +70,47 @@ export interface IAuth {
   validateJwt(token: string): Promise<boolean>;
 }
 
+export interface SessionPayload {
+  address: string;
+  chainId: number;
+  contextHash?: string;
+  ipSubnet?: string;
+}
+
+export interface JsonWebKey {
+  kty: "RSA";
+  use: "sig";
+  alg: "RS256";
+  kid: string;
+  n: string;
+  e: string;
+  x5t?: string;
+  x5c?: string[];
+  "x5t#S256"?: string;
+}
+
+export interface JwksResponse {
+  keys: JsonWebKey[];
+}
+
 export interface TalakWeb3Auth extends IAuth {
+  forceGlobalInvalidation(): Promise<void>;
+  signJwt(payload: SessionPayload): Promise<string>;
   loginWithSiwe(
     message: string,
     signature: string,
+    context?: { ip: string; userAgent: string },
   ): Promise<{ accessToken: string; refreshToken: string }>;
   createSession(address: string, chainId: number): Promise<string>;
+  getJwks(): Promise<JwksResponse>;
   verifySession(
     token: string,
     context?: { ip: string; userAgent: string },
-  ): Promise<{ address: string; chainId: number }>;
-  revokeSession(token: string): Promise<void>;
+  ): Promise<SessionPayload>;
+  revokeSession(accessToken: string, refreshToken?: string): Promise<void>;
   generateNonce(): string;
+  createNonce(address: string, meta?: { ip?: string; ua?: string }): Promise<string>;
+  refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }>;
 }
 
 export type TalakWeb3EventsMap = {

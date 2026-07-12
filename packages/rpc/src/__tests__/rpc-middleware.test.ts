@@ -1,12 +1,15 @@
-import { talakWeb3, __resetTalakWeb3 } from "@talak-web3/core";
+import {
+  InMemoryNonceStore,
+  InMemoryRefreshStore,
+  InMemoryRevocationStore,
+} from "@talak-web3/auth";
+import { talakWeb3 } from "@talak-web3/core";
 import { describe, expect, it } from "vitest";
 
 import { UnifiedRpc } from "../index";
 
 describe("UnifiedRpc middleware integration", () => {
   it("executes request middleware before performing the RPC call", async () => {
-    __resetTalakWeb3();
-
     const b3 = talakWeb3({
       chains: [
         {
@@ -18,6 +21,11 @@ describe("UnifiedRpc middleware integration", () => {
         },
       ],
       debug: false,
+      auth: {
+        nonceStore: new InMemoryNonceStore(),
+        refreshStore: new InMemoryRefreshStore(),
+        revocationStore: new InMemoryRevocationStore(),
+      },
     });
 
     const ctx = b3.context;

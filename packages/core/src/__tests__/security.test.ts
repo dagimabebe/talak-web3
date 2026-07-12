@@ -1,12 +1,13 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import {
+  InMemoryNonceStore,
+  InMemoryRefreshStore,
+  InMemoryRevocationStore,
+} from "@talak-web3/auth";
+import { describe, it, expect } from "vitest";
 
-import { talakWeb3, __resetTalakWeb3 } from "../index";
+import { talakWeb3 } from "../index";
 
 describe("talakWeb3 security", () => {
-  beforeEach(() => {
-    __resetTalakWeb3();
-  });
-
   it("should throw error if private key is leaked in config", () => {
     const leakedConfig = {
       apiKey: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
@@ -25,6 +26,11 @@ describe("talakWeb3 security", () => {
           nativeCurrency: { name: "Ether", symbol: "ETH" },
         },
       ],
+      auth: {
+        nonceStore: new InMemoryNonceStore(),
+        refreshStore: new InMemoryRefreshStore(),
+        revocationStore: new InMemoryRevocationStore(),
+      },
     };
 
     expect(() => talakWeb3(validConfig)).not.toThrow();

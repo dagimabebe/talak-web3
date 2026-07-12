@@ -124,9 +124,12 @@ export class UnifiedRpc implements IRpc {
       failover = true,
     } = options;
 
-    const run = async () => this.fetchWithRetry<T>(method, params, retries, timeout, failover);
+    const requestId = (this.requestIdCounter =
+      (this.requestIdCounter + 1) % Number.MAX_SAFE_INTEGER);
+    const run = async () =>
+      this.fetchWithRetry<T>(method, params, retries, timeout, failover, requestId);
 
-    const req = { method, params, options };
+    const req = { jsonrpc: "2.0", id: requestId, method, params };
 
     const readOnlyMethods = new Set([
       "eth_call",
@@ -173,6 +176,7 @@ export class UnifiedRpc implements IRpc {
     retries: number,
     timeout: number,
     failover: boolean,
+    requestId?: number,
   ): Promise<T> {
     let lastError: Error | undefined;
 
@@ -194,15 +198,18 @@ export class UnifiedRpc implements IRpc {
         if (this.circuitBreaker && endpoint.providerId) {
           return await this.circuitBreaker.execute(
             endpoint.providerId,
-            () => this.doRequest<T>(endpoint.url, method, params, timeout),
+            () => this.doRequest<T>(endpoint.url, method, params, timeout, requestId),
             timeout,
           );
         }
 
-        return await this.doRequest<T>(endpoint.url, method, params, timeout);
+        return await this.doRequest<T>(endpoint.url, method, params, timeout, requestId);
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        endpoint.health = { status: "down", latency: Infinity, lastChecked: Date.now() };
+        const canonical = this.endpoints.find((e) => e.url === endpoint.url);
+        if (canonical) {
+          canonical.health = { status: "down", latency: Infinity, lastChecked: Date.now() };
+        }
         this.ctx.hooks.emit("rpc-error", { endpoint: endpoint.url, error: lastError, attempt });
         this.ctx.logger.warn(
           `RPC attempt ${attempt + 1}/${retries + 1} failed on ${endpoint.url}: ${lastError.message}`,
@@ -256,16 +263,19 @@ export class UnifiedRpc implements IRpc {
     method: string,
     params: unknown[],
     timeoutMs: number,
+    requestId?: number,
   ): Promise<T> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      this.requestIdCounter = (this.requestIdCounter + 1) % Number.MAX_SAFE_INTEGER;
+      const id =
+        requestId ??
+        (this.requestIdCounter = (this.requestIdCounter + 1) % Number.MAX_SAFE_INTEGER);
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: this.requestIdCounter, method, params }),
+        body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
         signal: controller.signal,
       });
 

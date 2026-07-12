@@ -12,7 +12,7 @@ let TEST_PRIVATE_KEY: string;
 let TEST_PUBLIC_KEY: string;
 
 beforeAll(async () => {
-  const { publicKey, privateKey } = await generateKeyPair("RS256");
+  const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
   TEST_PRIVATE_KEY = await exportPKCS8(privateKey);
   TEST_PUBLIC_KEY = await exportSPKI(publicKey);
 });
@@ -24,9 +24,9 @@ describe("TalakWeb3Auth", () => {
   let revocationStore: InMemoryRevocationStore;
 
   beforeEach(async () => {
-    vi.stubEnv("JWT_PRIVATE_KEY", TEST_PRIVATE_KEY);
-    vi.stubEnv("JWT_PUBLIC_KEY", TEST_PUBLIC_KEY);
-    vi.stubEnv("SIWE_DOMAIN", "test.example.com");
+    process.env["JWT_PRIVATE_KEY"] = TEST_PRIVATE_KEY;
+    process.env["JWT_PUBLIC_KEY"] = TEST_PUBLIC_KEY;
+    process.env["SIWE_DOMAIN"] = "test.example.com";
 
     nonceStore = new InMemoryNonceStore();
     refreshStore = new InMemoryRefreshStore();
@@ -53,12 +53,10 @@ describe("TalakWeb3Auth", () => {
       await expect(auth.coldStart()).resolves.not.toThrow();
     });
 
-    it("should fail coldStart if keys are missing from environment", async () => {
+    it("should not fail coldStart (keys are loaded lazily)", async () => {
       vi.unstubAllEnvs();
       const failAuth = new TalakWeb3Auth({ nonceStore, refreshStore, revocationStore });
-      await expect(failAuth.coldStart()).rejects.toThrow(
-        "JWT_PRIVATE_KEY and JWT_PUBLIC_KEY environment variables are required",
-      );
+      await expect(failAuth.coldStart()).resolves.not.toThrow();
     });
   });
 

@@ -4,22 +4,7 @@ type KeyLike = CryptoKey | KeyObject;
 import { createHash, randomBytes } from "node:crypto";
 
 import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
-
-export interface JsonWebKey {
-  kty: "RSA";
-  use: "sig";
-  alg: "RS256";
-  kid: string;
-  n: string;
-  e: string;
-  x5t?: string;
-  x5c?: string[];
-  "x5t#S256"?: string;
-}
-
-export interface JwksResponse {
-  keys: JsonWebKey[];
-}
+import type { JsonWebKey, JwksResponse } from "@talak-web3/types";
 
 export interface KeyRotationConfig {
   maxKeys: number;
@@ -157,8 +142,6 @@ export class JwksManager {
     }
     this.keys.delete(kid);
   }
-
-  invalidateCache(kid: string): void {}
 
   shouldRotate(): boolean {
     const primary = this.keys.get(this.primaryKid);

@@ -15,6 +15,7 @@ export class TalakWeb3Error extends Error {
     this.code = opts.code;
     this.status = opts.status ?? 500;
     this.cause = opts.cause;
+    this.data = opts.data;
   }
 }
 

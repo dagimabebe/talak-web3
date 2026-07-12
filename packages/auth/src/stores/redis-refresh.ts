@@ -139,6 +139,8 @@ export class RedisRefreshStore implements RefreshStore {
       const session = JSON.parse(raw) as RefreshSession;
       const remaining = Math.max(1, session.expiresAt - Date.now());
       await this.redis.set(key, JSON.stringify({ ...session, revoked: true }), "PX", remaining);
-    } catch {}
+    } catch {
+      /* if the refresh record is unreadable, skip best-effort revocation */
+    }
   }
 }

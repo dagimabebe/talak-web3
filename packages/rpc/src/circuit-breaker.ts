@@ -221,7 +221,9 @@ export class DistributedCircuitBreaker {
       await this.config.redis.set(key, JSON.stringify(stats), {
         PX: 7200000,
       });
-    } catch {}
+    } catch {
+      /* metrics are best-effort; never fail the circuit breaker on redis errors */
+    }
   }
 
   async getStats(providerId: string): Promise<CircuitState> {
@@ -237,7 +239,9 @@ export class DistributedCircuitBreaker {
 
     try {
       await this.config.redis.del(this.getLatencyKey(providerId));
-    } catch {}
+    } catch {
+      /* best-effort cleanup of latency samples */
+    }
   }
 
   private async shouldUseAdaptiveThreshold(providerId: string): Promise<boolean> {

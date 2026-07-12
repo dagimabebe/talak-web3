@@ -69,6 +69,75 @@ redis.call('PEXPIRE', key, windowMs)
 return { allowed, remaining, now + windowMs }
 `;
 
+export class InMemoryRateLimiter implements RateLimiter {
+  private readonly capacity: number;
+  private readonly refillPerSecond: number;
+  private readonly maxBuckets: number;
+  private readonly buckets = new Map<string, { tokens: number; last: number }>();
+
+  constructor(opts: { capacity: number; refillPerSecond: number; maxBuckets?: number }) {
+    this.capacity = opts.capacity;
+    this.refillPerSecond = opts.refillPerSecond;
+    this.maxBuckets = opts.maxBuckets ?? 10_000;
+  }
+
+  private bucket(key: string): { tokens: number; last: number } {
+    let b = this.buckets.get(key);
+    if (!b) {
+      b = { tokens: this.capacity, last: Date.now() };
+      this.buckets.set(key, b);
+      this.evictIfNeeded();
+    }
+    return b;
+  }
+
+  private evictIfNeeded(): void {
+    if (this.buckets.size <= this.maxBuckets) return;
+    let oldestKey: string | undefined;
+    let oldestLast = Infinity;
+    for (const [k, v] of this.buckets) {
+      if (v.last < oldestLast) {
+        oldestLast = v.last;
+        oldestKey = k;
+      }
+    }
+    if (oldestKey) this.buckets.delete(oldestKey);
+  }
+
+  private refill(b: { tokens: number; last: number }): void {
+    const now = Date.now();
+    const elapsedSeconds = (now - b.last) / 1000;
+    if (elapsedSeconds > 0) {
+      b.tokens = Math.min(this.capacity, b.tokens + elapsedSeconds * this.refillPerSecond);
+      b.last = now;
+    }
+  }
+
+  async check(key: string, cost = 1): Promise<RateLimitResult> {
+    const b = this.bucket(key);
+    this.refill(b);
+
+    if (b.tokens >= cost) {
+      b.tokens -= cost;
+      return {
+        allowed: true,
+        remaining: Math.max(0, Math.floor(b.tokens)),
+        resetAt: Date.now() + ((this.capacity - b.tokens) / this.refillPerSecond) * 1000,
+      };
+    }
+
+    return {
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + ((cost - b.tokens) / this.refillPerSecond) * 1000,
+    };
+  }
+
+  async reset(key: string): Promise<void> {
+    this.buckets.delete(key);
+  }
+}
+
 export class RedisRateLimiter implements RateLimiter {
   private readonly redis: Redis;
   private readonly capacity: number;

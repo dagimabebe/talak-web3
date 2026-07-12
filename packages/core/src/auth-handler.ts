@@ -1,5 +1,5 @@
-import type { TalakWeb3Auth } from "@talak-web3/auth";
 import { TalakWeb3Error } from "@talak-web3/errors";
+import type { TalakWeb3Auth } from "@talak-web3/types";
 import type { TalakWeb3Context, TalakWeb3Instance } from "@talak-web3/types";
 
 import {

@@ -1,9 +1,20 @@
+import {
+  InMemoryNonceStore,
+  InMemoryRefreshStore,
+  InMemoryRevocationStore,
+} from "@talak-web3/auth";
 import type { RedisClientType } from "redis";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { RedisRateLimiter } from "../../../rate-limit/src/index.js";
 import { validateRpcRequest } from "../../../rpc/src/validation.js";
 import { createTalakWeb3 } from "../index.js";
+
+const stores = () => ({
+  nonceStore: new InMemoryNonceStore(),
+  refreshStore: new InMemoryRefreshStore(),
+  revocationStore: new InMemoryRevocationStore(),
+});
 
 describe("Security Hardening Audit", () => {
   describe("RPC Input Validation (Strict Zod)", () => {
@@ -60,22 +71,14 @@ describe("Security Hardening Audit", () => {
   });
 
   describe("JWT Hardening (Asymmetric RS256)", () => {
-    it("should throw if asymmetric keys are missing in production mode", async () => {
-      const originalKey = process.env["JWT_PRIVATE_KEY"];
-      delete process.env["JWT_PRIVATE_KEY"];
-
-      try {
-        const instance = createTalakWeb3({
-          chains: [],
-          rpc: { retries: 3, timeout: 5000 },
-          debug: false,
-        });
-        await expect(instance.init()).rejects.toThrow(
-          "JWT_PRIVATE_KEY and JWT_PUBLIC_KEY environment variables are required",
-        );
-      } finally {
-        process.env["JWT_PRIVATE_KEY"] = originalKey;
-      }
+    it("should complete coldStart without throwing (keys are provisioned lazily)", async () => {
+      const instance = createTalakWeb3({
+        chains: [],
+        rpc: { retries: 3, timeout: 5000 },
+        debug: false,
+        auth: stores(),
+      });
+      await expect(instance.init()).resolves.not.toThrow();
     });
   });
 });
