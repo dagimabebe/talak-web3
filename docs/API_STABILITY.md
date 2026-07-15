@@ -29,4 +29,21 @@ These APIs are evolving and may change between minor versions. Use with caution 
 
 ---
 
+## 4. Pending Breaking Changes (planned for next major version)
+
+The changes below to the Tier-1 `TalakWeb3Auth` interface are **already landed in source** but will be released under a future **SemVer-major** bump, with a migration guide per §3. They are documented now so consumers can prepare ahead of the versioned release.
+
+### `TalakWeb3Auth` contract changes
+
+- **`verifySession(token, context?)` return type** changed from `{ address: string; chainId: number }` to `SessionPayload`. `SessionPayload` still exposes `address` and `chainId`, so read-only consumers are unaffected; consumers that relied on the nominal tuple type must update their types.
+- **`revokeSession` signature** changed from `revokeSession(token)` to `revokeSession(accessToken: string, refreshToken?: string)`. Revocation now accepts the access token (revoked by `jti`) and optionally the refresh token (revoked independently). Old single-argument callers must pass the access token as the first argument.
+- **New required methods** added to the interface (implementers must provide them):
+  - `forceGlobalInvalidation(): Promise<void>`
+  - `signJwt(payload: SessionPayload): Promise<string>`
+  - `getJwks(): Promise<JwksResponse>`
+  - `createNonce(address: string, meta?: { ip?: string; ua?: string }): Promise<string>`
+  - `refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }>`
+
+**Migration impact**: consumers that only call `loginWithSiwe` / `refresh` / `verifySession` and read `address` / `chainId` require no code change. Custom `TalakWeb3Auth` implementers must add the five new methods before upgrading to the major version that ships these changes.
+
 [Back to Root README](../README.md)

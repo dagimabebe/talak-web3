@@ -10,29 +10,28 @@ For a short overview of the `packages/` directory, see [`packages/README.md`](pa
 
 ## Libraries (`packages/`)
 
-| Path                                                      | npm name                       | README                                        | Summary                                                 |
-| --------------------------------------------------------- | ------------------------------ | --------------------------------------------- | ------------------------------------------------------- |
-| [`packages/sdk`](packages/sdk/)                           | `@talak-web3/sdk`              | [README](packages/sdk/README.md)              | Unified SDK entrypoint; re-exports feature modules.     |
-| [`packages/adapters`](packages/adapters/)                 | `@talak-web3/adapters`         | [README](packages/adapters/README.md)         | Adapters for web, Node, and other runtimes.             |
-| [`packages/ai`](packages/ai/)                             | `@talak-web3/ai`               | [README](packages/ai/README.md)               | AI-related helpers and integrations.                    |
-| [`packages/analytics-engine`](packages/analytics-engine/) | `@talak-web3/analytics-engine` | [README](packages/analytics-engine/README.md) | Analytics event types and sinks (engine).               |
-| [`packages/auth`](packages/auth/)                         | `@talak-web3/auth`             | [README](packages/auth/README.md)             | SIWE, sessions, token lifecycle.                        |
-| [`packages/client`](packages/client/)                     | `@talak-web3/client`           | [README](packages/client/README.md)           | HTTP client for talak-web3 APIs.                        |
-| [`packages/config`](packages/config/)                     | `@talak-web3/config`           | [README](packages/config/README.md)           | Configuration loading and validation.                   |
-| [`packages/core`](packages/core/)                         | `@talak-web3/core`             | [README](packages/core/README.md)             | Core orchestrator, plugins, middleware chains, context. |
-| [`packages/errors`](packages/errors/)                     | `@talak-web3/errors`           | [README](packages/errors/README.md)           | Shared error types and helpers.                         |
-| [`packages/hooks`](packages/hooks/)                       | `@talak-web3/hooks`            | [README](packages/hooks/README.md)            | React hooks and providers.                              |
-| [`packages/talak-web3`](packages/talak-web3/)             | `talak-web3`                   | [README](packages/talak-web3/README.md)       | Unified SDK; includes `talak-web3/nextjs` integration.  |
-| [`packages/identity`](packages/identity/)                 | `@talak-web3/identity`         | [README](packages/identity/README.md)         | Identity and account abstractions.                      |
-| [`packages/realtime`](packages/realtime/)                 | `@talak-web3/realtime`         | [README](packages/realtime/README.md)         | Realtime channels and messaging.                        |
-| [`packages/rpc`](packages/rpc/)                           | `@talak-web3/rpc`              | [README](packages/rpc/README.md)              | Multi-provider RPC routing and resilience.              |
-| [`packages/test-utils`](packages/test-utils/)             | `@talak-web3/test-utils`       | [README](packages/test-utils/README.md)       | Mocks, factories, and test helpers.                     |
-| [`packages/tx`](packages/tx/)                             | `@talak-web3/tx`               | [README](packages/tx/README.md)               | Transaction and account-abstraction utilities.          |
-| [`packages/types`](packages/types/)                       | `@talak-web3/types`            | [README](packages/types/README.md)            | Shared TypeScript types.                                |
-| [`packages/utils`](packages/utils/)                       | `@talak-web3/utils`            | [README](packages/utils/README.md)            | General-purpose utilities.                              |
-| [`packages/cli`](packages/cli/)                           | `@talak-web3/cli`              | [README](packages/cli/README.md)              | CLI: `init`, `doctor`, `generate`, and other tooling.   |
-| [`packages/dashboard`](packages/dashboard/)               | `@talak-web3/dashboard`        | [README](packages/dashboard/README.md)        | Admin dashboard UI building blocks.                     |
-| [`packages/templates`](packages/templates/)               | `@talak-web3/templates`        | [README](packages/templates/README.md)        | Programmatic templates used by the CLI.                 |
+| Path                                          | npm name                 | README                                  | Summary                                                 |
+| --------------------------------------------- | ------------------------ | --------------------------------------- | ------------------------------------------------------- |
+| [`packages/sdk`](packages/sdk/)               | `@talak-web3/sdk`        | [README](packages/sdk/README.md)        | Unified SDK entrypoint; re-exports feature modules.     |
+| [`packages/adapters`](packages/adapters/)     | `@talak-web3/adapters`   | [README](packages/adapters/README.md)   | Adapters for web, Node, and other runtimes.             |
+| [`packages/ai`](packages/ai/)                 | `@talak-web3/ai`         | [README](packages/ai/README.md)         | AI-related helpers and integrations.                    |
+| [`packages/auth`](packages/auth/)             | `@talak-web3/auth`       | [README](packages/auth/README.md)       | SIWE, sessions, token lifecycle.                        |
+| [`packages/client`](packages/client/)         | `@talak-web3/client`     | [README](packages/client/README.md)     | HTTP client for talak-web3 APIs.                        |
+| [`packages/config`](packages/config/)         | `@talak-web3/config`     | [README](packages/config/README.md)     | Configuration loading and validation.                   |
+| [`packages/core`](packages/core/)             | `@talak-web3/core`       | [README](packages/core/README.md)       | Core orchestrator, plugins, middleware chains, context. |
+| [`packages/errors`](packages/errors/)         | `@talak-web3/errors`     | [README](packages/errors/README.md)     | Shared error types and helpers.                         |
+| [`packages/hooks`](packages/hooks/)           | `@talak-web3/hooks`      | [README](packages/hooks/README.md)      | React hooks and providers.                              |
+| [`packages/talak-web3`](packages/talak-web3/) | `talak-web3`             | [README](packages/talak-web3/README.md) | Unified SDK; includes `talak-web3/nextjs` integration.  |
+| [`packages/identity`](packages/identity/)     | `@talak-web3/identity`   | [README](packages/identity/README.md)   | Identity and account abstractions.                      |
+| [`packages/realtime`](packages/realtime/)     | `@talak-web3/realtime`   | [README](packages/realtime/README.md)   | Realtime channels and messaging.                        |
+| [`packages/rpc`](packages/rpc/)               | `@talak-web3/rpc`        | [README](packages/rpc/README.md)        | Multi-provider RPC routing and resilience.              |
+| [`packages/test-utils`](packages/test-utils/) | `@talak-web3/test-utils` | [README](packages/test-utils/README.md) | Mocks, factories, and test helpers.                     |
+| [`packages/tx`](packages/tx/)                 | `@talak-web3/tx`         | [README](packages/tx/README.md)         | Transaction and account-abstraction utilities.          |
+| [`packages/types`](packages/types/)           | `@talak-web3/types`      | [README](packages/types/README.md)      | Shared TypeScript types.                                |
+| [`packages/utils`](packages/utils/)           | `@talak-web3/utils`      | [README](packages/utils/README.md)      | General-purpose utilities.                              |
+| [`packages/cli`](packages/cli/)               | `@talak-web3/cli`        | [README](packages/cli/README.md)        | CLI: `init`, `doctor`, `generate`, and other tooling.   |
+| [`packages/dashboard`](packages/dashboard/)   | `@talak-web3/dashboard`  | [README](packages/dashboard/README.md)  | Admin dashboard UI building blocks.                     |
+| [`packages/templates`](packages/templates/)   | `@talak-web3/templates`  | [README](packages/templates/README.md)  | Programmatic templates used by the CLI.                 |
 
 ---
 

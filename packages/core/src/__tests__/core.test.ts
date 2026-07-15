@@ -1,23 +1,30 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  InMemoryNonceStore,
+  InMemoryRefreshStore,
+  InMemoryRevocationStore,
+} from "@talak-web3/auth";
+import { describe, it, expect, vi } from "vitest";
 
-import { talakWeb3, __resetTalakWeb3 } from "../index";
+import { talakWeb3 } from "../index";
+
+const stores = () => ({
+  nonceStore: new InMemoryNonceStore(),
+  refreshStore: new InMemoryRefreshStore(),
+  revocationStore: new InMemoryRevocationStore(),
+});
 
 describe("talakWeb3", () => {
-  beforeEach(() => {
-    __resetTalakWeb3();
-  });
-
   it("should initialize with default config", () => {
-    const instance = talakWeb3();
+    const instance = talakWeb3({ auth: stores() });
     expect(instance.config).toBeDefined();
     expect(instance.hooks).toBeDefined();
     expect(instance.context).toBeDefined();
   });
 
-  it("should be a singleton", () => {
-    const instance1 = talakWeb3({ key: "1" });
-    const instance2 = talakWeb3({ key: "2" });
-    expect(instance1).toBe(instance2);
+  it("should create independent instances", () => {
+    const instance1 = talakWeb3({ key: "1", auth: stores() });
+    const instance2 = talakWeb3({ key: "2", auth: stores() });
+    expect(instance1).not.toBe(instance2);
   });
 
   it("should setup plugins during init", async () => {
@@ -28,7 +35,7 @@ describe("talakWeb3", () => {
       setup,
     };
 
-    const instance = talakWeb3({ plugins: [plugin] });
+    const instance = talakWeb3({ plugins: [plugin], auth: stores() });
     await instance.init();
 
     expect(setup).toHaveBeenCalledWith(instance.context);

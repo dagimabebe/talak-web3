@@ -10,7 +10,6 @@
     { "path": "../../packages/core" },
     { "path": "../../packages/auth" },
     { "path": "../../packages/rpc" },
-    { "path": "../../packages/analytics" },
     { "path": "../../packages/errors" },
     { "path": "../../packages/types" }
   ],

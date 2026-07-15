@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { InMemoryRateLimiter } from "../src/index.js";
+import { InMemoryRateLimiter } from "../index.js";
 
 describe("InMemoryRateLimiter", () => {
   let limiter: InMemoryRateLimiter;

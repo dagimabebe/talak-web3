@@ -85,7 +85,9 @@ export class WebSocketMessagingClient implements MessagingClient {
         try {
           const envelope = JSON.parse(evt.data as string) as WsEnvelope;
           this.handleEnvelope(envelope);
-        } catch {}
+        } catch {
+          /* ignore malformed or non-JSON frames */
+        }
       });
     });
   }
@@ -201,7 +203,9 @@ export class WebSocketMessagingClient implements MessagingClient {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         try {
           this.ws.send(JSON.stringify({ type: "ping" }));
-        } catch {}
+        } catch {
+          /* best-effort heartbeat; ignore if the socket is closed */
+        }
       }
     }, 30_000);
     this.heartbeatTimer.unref?.();

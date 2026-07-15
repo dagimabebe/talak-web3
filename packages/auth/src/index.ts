@@ -2,16 +2,17 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
 import type { TalakWeb3Auth as TalakWeb3AuthInterface } from "@talak-web3/types";
+import type { JwksResponse, SessionPayload } from "@talak-web3/types";
 import type { KeyObject } from "jose";
 import { verifyMessage } from "viem";
 
 import type { NonceStore, RefreshSession, RefreshStore, RevocationStore } from "./contracts.js";
 import type { KeyRotationConfig } from "./jwks.js";
-import type { JwksResponse } from "./jwks.js";
 import { createKeyProvider, type KeyProviderType, JwtManager } from "./key-management.js";
 import { getAuthoritativeTime, type AuthoritativeTime } from "./time.js";
 
 export type { NonceStore, RefreshSession, RefreshStore, RevocationStore } from "./contracts.js";
+export type { SessionPayload } from "@talak-web3/types";
 export type { KeyProviderType } from "./key-management.js";
 export { AuthoritativeTime } from "./time.js";
 type KeyLike = CryptoKey | KeyObject;
@@ -357,13 +358,6 @@ export class InMemoryRevocationStore implements RevocationStore {
   }
 }
 
-export interface SessionPayload {
-  address: string;
-  chainId: number;
-  contextHash?: string;
-  ipSubnet?: string;
-}
-
 export class TalakWeb3Auth implements TalakWeb3AuthInterface {
   private readonly jwtManager: JwtManager;
   private readonly nonceStore: NonceStore;
@@ -415,7 +409,9 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     this.jwtManager = new JwtManager(keyProvider);
   }
 
-  async coldStart(): Promise<void> {}
+  async coldStart(): Promise<void> {
+    /* no-op: signing keys are provisioned lazily on first use */
+  }
 
   async validateJwt(token: string): Promise<boolean> {
     try {
@@ -688,7 +684,9 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
       if (typeof jti === "string" && typeof exp === "number") {
         await this.revocations.revoke(jti, exp * 1000);
       }
-    } catch {}
+    } catch {
+      /* access-token revocation is best-effort; the refresh token is still revoked below */
+    }
 
     if (refreshToken) {
       await this.refreshStore.revoke(refreshToken);

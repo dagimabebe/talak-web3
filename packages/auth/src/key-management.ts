@@ -1,17 +1,11 @@
-import {
-  jwtVerify,
-  type JWTVerifyOptions,
-  importPKCS8,
-  importSPKI,
-  type KeyObject,
-  FlattenedSign,
-} from "jose";
+import { jwtVerify, type JWTVerifyOptions, importPKCS8, importSPKI, type KeyObject } from "jose";
 
 type KeyLike = CryptoKey | KeyObject;
 import { TalakWeb3Error, AUTH_ERROR_CODES } from "@talak-web3/errors";
+import type { JwksResponse } from "@talak-web3/types";
 import type { RedisClientType } from "redis"; // @ts-ignore: redis types optional
 
-import { JwksManager, type JwksResponse, type KeyRotationConfig } from "./jwks.js";
+import { JwksManager, type KeyRotationConfig } from "./jwks.js";
 
 /**
  * Signing/verification seam for JWT operations.
@@ -69,10 +63,12 @@ export class EnvironmentKeyProvider implements KeyProvider {
       });
     }
 
-    const signer = new FlattenedSign(data);
-    signer.setProtectedHeader({ alg: "RS256" });
-    const jws = await signer.sign(key.privateKey);
-    return Buffer.from(jws.signature, "base64url");
+    const signature = await crypto.subtle.sign(
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      key.privateKey as CryptoKey,
+      new Uint8Array(data),
+    );
+    return new Uint8Array(signature);
   }
 
   async getVerificationKeys(): Promise<{ kid: string; publicKey: KeyLike }[]> {
