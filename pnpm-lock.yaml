@@ -265,9 +265,6 @@ importers:
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
-      '@talak-web3/utils':
-        specifier: workspace:*
-        version: link:../utils
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -466,9 +463,6 @@ importers:
 
   packages/utils:
     dependencies:
-      '@talak-web3/errors':
-        specifier: workspace:*
-        version: link:../errors
       '@talak-web3/types':
         specifier: workspace:*
         version: link:../types
