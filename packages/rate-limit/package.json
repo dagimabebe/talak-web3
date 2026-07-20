@@ -20,13 +20,11 @@
     "directory": "packages/rate-limit"
   },
   "files": [
-    "src",
     "dist",
-    "README.md",
-    "tsdown.config.ts",
-    "tsconfig.json"
+    "README.md"
   ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -44,10 +42,12 @@
     "build": "tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "clean": "pnpm rimraf dist"
+    "clean": "pnpm rimraf dist",
+    "lint:package": "publint run --strict --pack false",
+    "lint:types": "attw --profile node16 --pack ."
   },
   "peerDependencies": {
-    "ioredis": "5.0.0"
+    "ioredis": "^5.0.0"
   },
   "peerDependenciesMeta": {
     "ioredis": {
