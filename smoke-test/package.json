@@ -1,12 +1,12 @@
 {
   "name": "@talak-web3/smoke-test",
-  "private": true,
   "version": "0.0.1",
+  "private": true,
   "type": "module",
-  "dependencies": {
-    "talak-web3": "workspace:*"
-  },
   "scripts": {
     "test": "node test-cjs-require.cjs && node test-esm-import.mjs"
+  },
+  "dependencies": {
+    "talak-web3": "workspace:*"
   }
 }

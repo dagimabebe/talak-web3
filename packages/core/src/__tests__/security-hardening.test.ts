@@ -73,7 +73,15 @@ describe("Security Hardening Audit", () => {
   describe("JWT Hardening (Asymmetric RS256)", () => {
     it("should complete coldStart without throwing (keys are provisioned lazily)", async () => {
       const instance = createTalakWeb3({
-        chains: [],
+        chains: [
+          {
+            id: 1,
+            name: "Ethereum",
+            rpcUrls: ["https://rpc.example.com"],
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            testnet: false,
+          },
+        ],
         rpc: { retries: 3, timeout: 5000 },
         debug: false,
         auth: stores(),
