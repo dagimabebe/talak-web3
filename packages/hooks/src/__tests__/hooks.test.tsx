@@ -259,7 +259,7 @@ describe("useGasless", () => {
   it("calls aa.sendGasless and returns hash on success", async () => {
     const instance = createMockInstance();
     const sendGasless = vi.fn().mockResolvedValue("0xhash123");
-    (instance.context as unknown as Record<string, unknown>)["aa"] = { sendGasless };
+    instance.context.plugins.set("aa", { sendGasless });
     const wrapper = createWrapper(instance);
 
     const { result } = renderHook(() => useGasless(), { wrapper });
@@ -304,7 +304,7 @@ describe("useIdentity", () => {
     const instance = createMockInstance();
     const mockProfile = { did: "did:key:z123", ens: "alice.eth", address: "0xDEF" };
     const resolve = vi.fn().mockResolvedValue(mockProfile);
-    (instance.context as unknown as Record<string, unknown>)["identity"] = { resolve };
+    instance.context.plugins.set("identity", { resolve });
     const wrapper = createWrapper(instance);
 
     const { result } = renderHook(() => useIdentity(), { wrapper });
@@ -358,7 +358,7 @@ describe("Edge cases", () => {
   it("useGasless propagates internal errors", async () => {
     const instance = createMockInstance();
     const sendGasless = vi.fn().mockRejectedValue(new Error("bundler down"));
-    (instance.context as unknown as Record<string, unknown>)["aa"] = { sendGasless };
+    instance.context.plugins.set("aa", { sendGasless });
     const wrapper = createWrapper(instance);
 
     const { result } = renderHook(() => useGasless(), { wrapper });

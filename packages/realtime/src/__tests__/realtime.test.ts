@@ -20,6 +20,10 @@ class MockWebSocket {
     this.listeners[type]!.push(handler);
   }
 
+  removeEventListener(type: string, handler: (evt: unknown) => void) {
+    this.listeners[type] = this.listeners[type]?.filter((h) => h !== handler) ?? [];
+  }
+
   send(data: string) {
     void data;
   }
