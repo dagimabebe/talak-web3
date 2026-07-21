@@ -13,21 +13,24 @@
     "directory": "packages/core"
   },
   "files": [
-    "src",
     "dist",
-    "README.md",
-    "tsdown.config.ts",
-    "tsconfig.json"
+    "README.md"
   ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "publishConfig": {
@@ -38,7 +41,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "pnpm rimraf dist"
+    "clean": "pnpm rimraf dist",
+    "lint:package": "publint run --strict --pack false",
+    "lint:types": "attw --profile node16 --pack ."
   },
   "dependencies": {
     "@talak-web3/auth": "workspace:*",

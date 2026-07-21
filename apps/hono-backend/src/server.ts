@@ -10,6 +10,7 @@ import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { createClient, type RedisClientType } from "redis";
+import { verifyMessage } from "viem";
 import { z } from "zod";
 
 import { logger, requestLogger, getLogger } from "./logger.js";
@@ -235,6 +236,7 @@ const auth = new TalakWeb3Auth({
     gracePeriodMs: parseInt(process.env["JWT_GRACE_PERIOD_MS"] ?? "604800000"),
     rotationIntervalMs: parseInt(process.env["JWT_ROTATION_INTERVAL_MS"] ?? "2592000000"),
   },
+  verifySignature: verifyMessage,
 });
 
 const configuredChains = (process.env["SUPPORTED_CHAINS"] ?? "1")

@@ -16,6 +16,20 @@
       "dependsOn": ["^lint"],
       "outputs": []
     },
+    "lint:package": {
+      "dependsOn": ["^build", "build"],
+      "inputs": ["dist/**", "package.json"],
+      "outputs": []
+    },
+    "lint:types": {
+      "dependsOn": ["^build", "build"],
+      "inputs": ["dist/**", "package.json"],
+      "outputs": []
+    },
+    "lint:packages": {
+      "dependsOn": ["lint:package", "lint:types"],
+      "outputs": []
+    },
     "test": {
       "dependsOn": ["^test"],
       "outputs": ["coverage/**"],

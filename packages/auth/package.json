@@ -13,26 +13,34 @@
     "directory": "packages/auth"
   },
   "files": [
-    "src",
     "dist",
-    "README.md",
-    "tsdown.config.ts",
-    "tsconfig.json"
+    "README.md"
   ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./stores": {
-      "types": "./dist/stores/index.d.ts",
-      "import": "./dist/stores/index.js",
-      "require": "./dist/stores/index.cjs"
+      "import": {
+        "types": "./dist/stores/index.d.ts",
+        "default": "./dist/stores/index.js"
+      },
+      "require": {
+        "types": "./dist/stores/index.d.cts",
+        "default": "./dist/stores/index.cjs"
+      }
     }
   },
   "publishConfig": {
@@ -43,14 +51,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "pnpm rimraf dist"
+    "clean": "pnpm rimraf dist",
+    "lint:package": "publint run --strict --pack false",
+    "lint:types": "attw --profile node16 --pack ."
   },
   "dependencies": {
     "@talak-web3/errors": "workspace:*",
     "@talak-web3/types": "workspace:*",
-    "ioredis": "5.10.1",
-    "jose": "6.2.2",
-    "viem": "2.48.1"
+    "ioredis": "^5.0.0",
+    "jose": "^6.0.0",
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",

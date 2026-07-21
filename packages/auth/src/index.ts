@@ -17,6 +17,12 @@ export type { KeyProviderType } from "./key-management.js";
 export { AuthoritativeTime } from "./time.js";
 type KeyLike = CryptoKey | KeyObject;
 
+export type SignatureVerifier = (args: {
+  address: `0x${string}`;
+  message: string;
+  signature: `0x${string}`;
+}) => Promise<boolean>;
+
 interface SiweFields {
   domain: string;
   address: `0x${string}`;
@@ -477,6 +483,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
   private readonly timeSource: AuthoritativeTime;
   private readonly contextEnforcementDate: number;
   private readonly allowedChains: number[] | undefined;
+  private readonly verifySignature: SignatureVerifier;
 
   constructor(opts: {
     nonceStore: NonceStore;
@@ -491,6 +498,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     keyRotationConfig?: unknown;
     timeSource?: AuthoritativeTime;
     contextEnforcementDate?: Date;
+    verifySignature?: SignatureVerifier;
   }) {
     if (!opts || !opts.nonceStore || !opts.refreshStore || !opts.revocationStore) {
       throw new TalakWeb3Error(
@@ -509,6 +517,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
     this.timeSource = opts.timeSource ?? getAuthoritativeTime();
     this.contextEnforcementDate =
       opts.contextEnforcementDate?.getTime() ?? new Date("2025-06-01T00:00:00Z").getTime();
+    this.verifySignature = opts.verifySignature ?? verifyMessage;
 
     const keyProviderType = opts.keyProviderType ?? "environment";
     const keyProviderOptions = opts.keyProviderOptions ?? {};
@@ -622,7 +631,7 @@ export class TalakWeb3Auth implements TalakWeb3AuthInterface {
       });
     }
 
-    const valid = await verifyMessage({
+    const valid = await this.verifySignature({
       address: fields.address,
       message: normalizedMessage,
       signature: signature as `0x${string}`,
