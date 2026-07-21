@@ -65,13 +65,20 @@ vi.mock("redis", () => {
     }),
     eval: vi.fn().mockImplementation((script: string, ...callArgs: unknown[]) => {
       const s = String(script);
+      // Support both ioredis flat format: (script, numKeys, key1..keyN, arg1..argN)
+      // and redis v4 options format: (script, { keys: [...], arguments: [...] })
       const firstArg = callArgs[0] as Record<string, unknown> | undefined;
-      const keys: string[] = Array.isArray(firstArg?.keys) ? (firstArg!.keys as string[]) : [];
+      const keys: string[] = Array.isArray(firstArg?.keys)
+        ? (firstArg!.keys as string[])
+        : (() => {
+            const nk = Number(callArgs[0]) || 0;
+            return callArgs.slice(1, 1 + nk) as string[];
+          })();
       const scriptArgs: string[] = Array.isArray(firstArg?.arguments)
         ? (firstArg!.arguments as string[]).map(String)
-        : callArgs.slice(1).map(String);
+        : callArgs.slice(1 + (Number(callArgs[0]) || 0)).map(String);
 
-      if (s.includes("consumed") && s.includes("HGETALL") && keys.length === 1) {
+      if (s.includes("consumed") && s.includes("HGETALL") && keys.length >= 1) {
         const key = keys[0];
         const map = hashStores.get(key);
         if (!map || map.size === 0) return Promise.resolve(0);
@@ -85,7 +92,7 @@ vi.mock("redis", () => {
         return Promise.resolve(1);
       }
 
-      if (s.includes("HMSET") && s.includes("revoked") && keys.length === 2) {
+      if (s.includes("HMSET") && s.includes("revoked") && keys.length >= 2) {
         const [oldKey, newKey] = keys;
         const [ttlMs, newId, newHash] = scriptArgs;
         const oldMap = hashStores.get(oldKey);
@@ -110,7 +117,7 @@ vi.mock("redis", () => {
         return Promise.resolve([String(newExpiresAt), address, chainId]);
       }
 
-      if (s.includes("SISMEMBER") && keys.length === 2) {
+      if (s.includes("SISMEMBER") && keys.length >= 2) {
         const pendingKey = keys[1];
         const nonce = scriptArgs[0];
         if (consumedNonces.has(nonce)) return Promise.resolve(0);
@@ -220,13 +227,13 @@ vi.mock("./security/redis-hardening.js", () => ({
   },
 }));
 
-import app from "./server.js";
-
 vi.mock("viem", () => ({
   verifyMessage: vi.fn(),
 }));
 import { verifyMessage } from "viem";
 const mockVerify = vi.mocked(verifyMessage);
+
+import app from "./server.js";
 
 vi.mock("@talak-web3/core", () => ({
   talakWeb3: () => ({

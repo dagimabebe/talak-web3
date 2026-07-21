@@ -318,6 +318,10 @@ importers:
         version: link:../types
 
   packages/hooks:
+    dependencies:
+      '@talak-web3/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.9.1

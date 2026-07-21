@@ -41,6 +41,9 @@
     "lint:package": "publint run --strict --pack false",
     "lint:types": "attw --profile esm-only --pack ."
   },
+  "dependencies": {
+    "@talak-web3/types": "workspace:*"
+  },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

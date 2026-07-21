@@ -33,26 +33,44 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "default": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./multichain": {
-      "types": "./dist/multichain.d.ts",
-      "import": "./dist/multichain.js",
-      "require": "./dist/multichain.cjs",
-      "default": "./dist/multichain.js"
+      "import": {
+        "types": "./dist/multichain.d.ts",
+        "default": "./dist/multichain.js"
+      },
+      "require": {
+        "types": "./dist/multichain.d.cts",
+        "default": "./dist/multichain.cjs"
+      }
     },
     "./react": {
-      "types": "./dist/react.d.ts",
-      "import": "./dist/react.js",
-      "require": "./dist/react.cjs",
-      "default": "./dist/react.js"
+      "import": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
     },
     "./nextjs": {
-      "types": "./dist/nextjs.d.ts",
-      "import": "./dist/nextjs.js"
+      "import": {
+        "types": "./dist/nextjs.d.ts",
+        "default": "./dist/nextjs.js"
+      },
+      "require": {
+        "types": "./dist/nextjs.d.cts",
+        "default": "./dist/nextjs.cjs"
+      }
     }
   },
   "publishConfig": {
