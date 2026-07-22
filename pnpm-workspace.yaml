@@ -5,9 +5,9 @@ packages:
 
 catalog:
   "@types/node": "^22.12.0"
-  typescript: "^5.9.3"
+  typescript: "^7.0.0"
   vitest: "^4.1.5"
-  tsdown: "0.21.1"
+  tsdown: "^0.22.13"
 
 overrides:
   brace-expansion@<2: "1.1.13"

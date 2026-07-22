@@ -11,7 +11,6 @@ export function talakWeb3Config(overrides: Partial<UserConfig> = {}): UserConfig
     treeshake: true,
     sourcemap: true,
     dts: { sourcemap: true },
-    failOnWarn: "ci-only",
     ...overrides,
   };
 }
