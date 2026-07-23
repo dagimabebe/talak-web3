@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// oxlint-disable-next-line no-underscore-dangle
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface InitOptions {
@@ -184,7 +183,7 @@ export const app = talakWeb3({
 `;
   }
 
-  return `import { talakWeb3, MainnetPreset } from "talak-web3";
+  return `import { talakWeb3 } from "talak-web3";
 import {
   InMemoryNonceStore,
   InMemoryRefreshStore,
@@ -192,7 +191,7 @@ import {
 } from "@talak-web3/auth";
 
 export const app = talakWeb3({
-  ...MainnetPreset,
+  preset: "mainnet",
   auth: {
     domain: process.env.SIWE_DOMAIN || "localhost:3000",
     nonceStore: new InMemoryNonceStore(),

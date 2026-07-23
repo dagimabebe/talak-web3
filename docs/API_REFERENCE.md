@@ -9,10 +9,10 @@ Complete API reference for talak-web3.
 Creates a new talak-web3 application instance.
 
 ```typescript
-import { talakWeb3, MainnetPreset } from "talak-web3";
+import { talakWeb3 } from "talak-web3";
 
 const app = talakWeb3({
-  ...MainnetPreset,
+  preset: "mainnet",
   auth: {
     domain: "myapp.com",
     secret: process.env.JWT_SECRET!,
@@ -163,10 +163,10 @@ Re-exports from `@talak-web3/hooks`. There is **no** `useSIWE` helper — wire S
 import { TalakWeb3Provider, useTalakWeb3 } from "talak-web3/react";
 ```
 
-### `useAccount` / `useChain` / `useRpc`
+### `useAccount`
 
 ```typescript
-import { useAccount, useChain, useRpc } from "talak-web3/react";
+import { useAccount } from "talak-web3/react";
 ```
 
 ## Client (`TalakWeb3Client`)

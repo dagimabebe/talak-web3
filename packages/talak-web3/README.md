@@ -38,10 +38,10 @@ npm install talak-web3@1.0.9
 ### Basic Setup
 
 ```typescript
-import { talakWeb3, MainnetPreset } from "talak-web3";
+import { talakWeb3 } from "talak-web3";
 
 const app = talakWeb3({
-  ...MainnetPreset,
+  preset: "mainnet",
   auth: {
     domain: "yourdapp.com",
     secret: process.env.JWT_SECRET,
@@ -86,7 +86,7 @@ Client-side SIWE: `TalakWeb3Client({ baseUrl: "/api" })` or `fetch("/api/auth/..
 ### React Integration
 
 ```tsx
-import { TalakWeb3Provider, useAccount, useChain } from "talak-web3/react";
+import { TalakWeb3Provider, useAccount } from "talak-web3/react";
 
 function App() {
   return (
@@ -97,8 +97,7 @@ function App() {
 }
 
 function YourComponent() {
-  const { address, isConnected } = useAccount();
-  const { chain } = useChain();
+  const { address, chainId, isConnected } = useAccount();
 
   if (!isConnected) return <ConnectWallet />;
 
@@ -109,11 +108,12 @@ function YourComponent() {
 ### Multi-Chain Support
 
 ```typescript
-import { talakWeb3, MainnetPreset, PolygonPreset } from "talak-web3";
+import { talakWeb3, PolygonPreset } from "talak-web3";
 import { MultiChainRouter } from "talak-web3/multichain";
 
 const app = talakWeb3({
-  chains: [MainnetPreset, PolygonPreset],
+  preset: "mainnet",
+  chains: [...PolygonPreset.chains],
   auth: {
     domain: "yourdapp.com",
     secret: process.env.JWT_SECRET,
@@ -193,6 +193,7 @@ import {
   TalakWeb3Client,
   InMemoryTokenStorage,
   CookieTokenStorage,
+  PresetName,
   MainnetPreset,
   PolygonPreset,
   ConfigManager,
@@ -222,7 +223,7 @@ import type {
 ```typescript
 import { MultiChainRouter } from "talak-web3/multichain";
 
-import { TalakWeb3Provider, useTalakWeb3, useAccount, useChain } from "talak-web3/react";
+import { TalakWeb3Provider, useAccount, useTalakWeb3 } from "talak-web3/react";
 
 import { toNextJsHandler, nextCookies, getSession } from "talak-web3/nextjs";
 ```
@@ -269,7 +270,7 @@ Creates or returns the singleton application instance.
 
 **Parameters:**
 
-- `config` — Configuration object or preset (see `MainnetPreset`, `PolygonPreset`)
+- `config` — Configuration object (see `MainnetPreset`, `PolygonPreset`) or use `preset: "mainnet"`
 
 **Returns:**
 
