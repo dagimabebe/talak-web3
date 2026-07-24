@@ -8,6 +8,7 @@ catalog:
   typescript: "^7.0.0"
   vitest: "^4.1.5"
   tsdown: "^0.22.13"
+  viem: "^2.21.0"
   # catalog pins used by workspace; audit-sensitive tools also overridden below
 
 overrides:
@@ -39,6 +40,9 @@ overrides:
   "fumadocs-mdx>js-yaml": "4.3.0"
   fast-uri: "3.1.4"
   ws: "8.21.1"
+  sharp: ">=0.35.0"
+  elliptic: ">=6.6.2"
+  "fumadocs-core>next>postcss": ">=8.5.10"
   hono: ">=4.12.25"
   postcss: ">=8.5.10"
   "@hono/node-server": ">=1.19.14"

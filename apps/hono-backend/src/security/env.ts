@@ -1,6 +1,7 @@
 import { createPublicKey } from "node:crypto";
 
 import { TalakWeb3Error } from "@talak-web3/errors";
+import { logger } from "../logger.js";
 
 function validateKeyStrength(pem: string, label: string): void {
   try {
@@ -32,8 +33,8 @@ export function validateEnv(): void {
     );
   }
 
-  const priv = process.env["JWT_PRIVATE_KEY"]!;
-  const pub = process.env["JWT_PUBLIC_KEY"]!;
+  const priv = process.env["JWT_PRIVATE_KEY"] ?? "";
+  const pub = process.env["JWT_PUBLIC_KEY"] ?? "";
 
   if (!priv.includes("-----BEGIN PRIVATE KEY-----")) {
     throw new TalakWeb3Error(
@@ -62,6 +63,6 @@ export function validateEnv(): void {
     );
   }
 
-  console.log("[BOOTSTRAP] Environment validation: PASSED");
-  console.log("[BOOTSTRAP] JWT mode: RS256");
+  logger.info("Environment validation: PASSED");
+  logger.info("JWT mode: RS256");
 }

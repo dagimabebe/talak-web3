@@ -37,7 +37,7 @@ export class SecurityInvariant {
         for (const item of obj) collectValues(item, depth + 1);
         return;
       }
-      for (const val of Object.values(obj as Record<string, unknown>)) {
+      for (const val of Object.values(obj as Record<PropertyKey, unknown>)) {
         collectValues(val, depth + 1);
       }
     }
@@ -79,11 +79,11 @@ export class SecurityInvariant {
       if (Array.isArray(obj)) {
         return obj.some((item) => hasDangerousKeys(item, depth + 1));
       }
-      for (const key of Object.keys(obj as Record<string, unknown>)) {
+      for (const key of Object.keys(obj as Record<PropertyKey, unknown>)) {
         if (key === "__proto__" || key === "constructor" || key === "prototype") {
           return true;
         }
-        if (hasDangerousKeys((obj as Record<string, unknown>)[key], depth + 1)) {
+        if (hasDangerousKeys((obj as Record<PropertyKey, unknown>)[key], depth + 1)) {
           return true;
         }
       }
